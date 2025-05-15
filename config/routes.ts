@@ -1,4 +1,7 @@
-﻿export default [
+﻿import { layout } from "@/app";
+import component from "@/locales/en-US/component";
+
+export default [
 	{
 		path: '/user',
 		layout: false,
@@ -15,11 +18,17 @@
 			},
 		],
 	},
+	{
+		path: '/home',
+		name: 'Home',
+		component: './user/Home',
+		layout: false
+  	},
 
 	///////////////////////////////////
 	// DEFAULT MENU
 	{
-		path: '/dashboard',
+		path: '/admin',
 		name: 'Dashboard',
 		component: './TrangChu',
 		icon: 'HomeOutlined',

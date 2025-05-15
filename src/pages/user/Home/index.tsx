@@ -1,5 +1,6 @@
 import { Card } from 'antd';
 
+import { unitName } from '@/services/base/constant';
 import { useModel } from 'umi';
 
 const TrangChu = () => {
@@ -12,6 +13,7 @@ const TrangChu = () => {
 					<b>{data.length} users</b>
 				</div>
 				<h1 className='title'>THỰC HÀNH LẬP TRÌNH WEB</h1>
+				<h2 className='sub-title'>{unitName.toUpperCase()}</h2>
 			</div>
 		</Card>
 	);
