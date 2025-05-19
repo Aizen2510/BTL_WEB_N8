@@ -2,14 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
 import { Button, Checkbox, Form, Input, message } from 'antd';
 import { useHistory } from 'react-router-dom';
-import ReCAPTCHA from 'react-google-recaptcha';
-
 const Login = () => {
 	const [form] = Form.useForm();
 	const history = useHistory();
 	const [count, setCount] = useState<number>(Number(localStorage.getItem('failed')) || 0);
 	const [isVerified, setIsVerified] = useState<boolean>(count < 5);
-	const recaptchaRef = useRef<ReCAPTCHA>(null);
+
 
 	useEffect(() => {
 		const savedEmail = localStorage.getItem('savedEmail');
@@ -144,15 +142,6 @@ const Login = () => {
 					</div>
 				</Form.Item>
 
-				{count >= 5 && (
-					<Form.Item>
-						<ReCAPTCHA
-							ref={recaptchaRef}
-							sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" // ← Demo key, thay bằng key thật của bạn
-							onChange={onVerifyCaptcha}
-						/>
-					</Form.Item>
-				)}
 
 				<Form.Item>
 					<Button block type="primary" htmlType="submit">
@@ -162,7 +151,7 @@ const Login = () => {
 
 				<Form.Item style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '8px' }}>
 					<span>Bạn chưa có tài khoản?</span>
-					<Button onClick={() => history.push('/Register')} style={{ marginLeft: 10 }}>
+					<Button onClick={() => history.push('/register')} style={{ marginLeft: 10 }}>
 						Đăng ký ngay
 					</Button>
 				</Form.Item>

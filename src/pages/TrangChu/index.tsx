@@ -11,7 +11,7 @@ const TrangChu = () => {
 				<div>
 					<b>{data.length} users</b>
 				</div>
-				<h1 className='title'>THỰC HÀNH LẬP TRÌNH WEB</h1>
+				<h1 className='title'>có cái lôn</h1>
 			</div>
 		</Card>
 	);

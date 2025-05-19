@@ -1,5 +1,6 @@
 ﻿import { layout } from "@/app";
 import component from "@/locales/en-US/component";
+import path from "path";
 
 export default [
 	{
@@ -7,24 +8,22 @@ export default [
 		layout: false,
 		routes: [
 			{
-				path: '/user/login',
-				layout: false,
-				name: 'login',
-				component: './user/Login',
-			},
-			{
-				path: '/user',
-				redirect: '/user/login',
+
 			},
 		],
 	},
-	{
-		path: '/home',
-		name: 'Home',
-		component: './user/Home',
-		layout: false
-  	},
 
+	// aut
+	{
+		path: '/login',
+		component: './Login',
+		layout: false
+	},
+		{
+		path: '/register',
+		component: './Register',
+		layout: false
+	},
 	///////////////////////////////////
 	// DEFAULT MENU
 	{
@@ -34,16 +33,28 @@ export default [
 		icon: 'HomeOutlined',
 	},
 	{
+		path: '/documentmanaget',
+		name: 'Quản Lí Tài Liệu',
+		component: './QuanLiTaiLieu',
+		icon: 'FormOutlined',
+	},
+	{
+		path: '/category',
+		name: 'Danh Mục',
+		component: './DanhMucTaiLieu',
+		icon: 'PicRightOutlined',
+	},
+	{
+		path: '/report',
+		name: 'Báo Cáo Thống Kê',
+		component: './DocumentReport',
+		icon: 'BarChartOutlined',
+	},
+	{
 		path: '/gioi-thieu',
 		name: 'About',
 		component: './TienIch/GioiThieu',
 		hideInMenu: true,
-	},
-	{
-		path: '/random-user',
-		name: 'RandomUser',
-		component: './RandomUser',
-		icon: 'ArrowsAltOutlined',
 	},
 
 	// DANH MUC HE THONG
