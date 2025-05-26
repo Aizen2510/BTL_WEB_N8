@@ -16,7 +16,7 @@ export const useAuthActions = () => {
 
 		auth
 			.signoutRedirect({
-				post_logout_redirect_uri: window.location.origin + '/user/login',
+				post_logout_redirect_uri: window.location.origin + '/login',// khi out chuyen huong toi trang login
 				id_token_hint: auth.user?.id_token,
 			})
 			.then(() => {

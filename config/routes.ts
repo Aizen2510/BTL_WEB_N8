@@ -27,7 +27,13 @@ export default [
 	///////////////////////////////////
 	// DEFAULT MENU
 	{
+		path: '/dashboard',
+		component: './TrangChu',
+	},
+	{
 		path: '/admin',
+		
+
 		name: 'Dashboard',
 		component: './TrangChu',
 		icon: 'HomeOutlined',

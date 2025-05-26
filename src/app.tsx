@@ -28,6 +28,29 @@ export const initialStateConfig = {
  * */
 export async function getInitialState(): Promise<IInitialState> {
 	return {
+		settings: {},
+		currentUser: {
+			sub: 'b323b6c8-2f1e-4a9b-941b-f1e466b9ba40',
+			ssoId: 'b323b6c8-2f1e-4a9b-941b-f1e466b9ba40',
+			email: 'admin@example.com',
+			email_verified: true,
+			realm_access: {
+			roles: [
+				'QUAN_TRI_VIEN',
+				'strapi.super_admin',
+				'strapi.Editor',
+				'offline_access',
+				'admin',
+				'uma_authorization',
+				'default-roles-vwa',
+			],
+			},
+			name: 'Admin',
+			preferred_username: 'admin',
+			given_name: 'Administrator',
+			family_name: '',
+			picture: 'https://pbs.twimg.com/media/F2G-7txa8AEmmqA?format=jpg&name=4096x4096',
+		},
 		permissionLoading: true,
 	};
 }

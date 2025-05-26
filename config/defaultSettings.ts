@@ -1,26 +1,26 @@
 import { Settings as LayoutSettings } from '@ant-design/pro-layout';
 
 const Settings: LayoutSettings & {
-	pwa?: boolean;
-	logo?: string;
-	borderRadiusBase: string;
-	siderWidth: number;
+  pwa?: boolean;
+  logo?: string;
+  borderRadiusBase: string;
+  siderWidth: number;
 } = {
-	navTheme: 'light',
-	primaryColor: process.env.APP_CONFIG_PRIMARY_COLOR,
-	borderRadiusBase: '2px',
-	layout: 'mix',
-	contentWidth: 'Fluid',
-	fixedHeader: false,
-	fixSiderbar: true,
-	colorWeak: false,
-	title: 'LẬP TRÌNH WEB - RIPT',
-	pwa: false,
-	logo: '/logo.png',
-	iconfontUrl: '',
-	headerTheme: 'light',
-	headerHeight: 60,
-	siderWidth: 220,
+  navTheme: 'light',
+  layout: 'mix', // hoặc 'top' / 'side'
+  fixedHeader: true, // ✅ Header phải fixed để hiển thị avatar cố định
+  headerTheme: 'light',
+  siderWidth: 220,
+  title: 'HỆ THỐNG QUẢN LÍ TÀI LIỆU',
+  logo: '/logo.png',
+  borderRadiusBase: '2px',
+  contentWidth: 'Fluid',
+  pwa: false,
+  primaryColor: process.env.APP_CONFIG_PRIMARY_COLOR,
+  fixSiderbar: true,
+  colorWeak: false,
+  headerHeight: 60,
+  iconfontUrl: '',
 };
 
 export default Settings;
