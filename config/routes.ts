@@ -8,8 +8,29 @@ export default [
 		layout: false,
 		routes: [
 			{
-
+				path: '/user/home',
+				name: 'Trang chủ',
+				component: './user/Home',
+				layout: false,
 			},
+			{
+				path: '/user/tailieu',
+				name: 'Tài liệu',
+				layout: false,
+				component: './user/TaiLieu',
+			},
+			{
+				path: '/user/thongke',
+				name: 'Thống kê',
+				component: './user/ThongKe',
+				layout: false,
+			},
+			{
+				path: '/user/thaotactailieu',
+				name: 'Thao tác tài liệu',
+				component: './user/ThaoTacTaiLieu',
+				layout: false,
+			}
 		],
 	},
 
@@ -24,6 +45,9 @@ export default [
 		component: './Register',
 		layout: false
 	},
+
+
+
 	///////////////////////////////////
 	// DEFAULT MENU
 	{
@@ -56,12 +80,32 @@ export default [
 		component: './DocumentReport',
 		icon: 'BarChartOutlined',
 	},
+
+	/*{
+		path: '/themtailieu',
+		name: 'Đăng Tải Tài Liệu',
+		component: './ThemTaiLieu',
+		icon: 'FileAddOutlined',
+	},
+	{
+		path: '/duyettailieu',
+		name: 'Duyệt Tài Liệu',
+		component: './DuyetTaiLieu',
+		icon: 'CheckCircleOutlined',
+	},
+	{
+		path: '/thaotactailieu',
+		name: 'Thao Tác Tài Liệu',
+		component: './ThaoTacTaiLieu',
+		icon: 'FileProtectOutlined',
+	},*/
 	{
 		path: '/gioi-thieu',
 		name: 'About',
 		component: './TienIch/GioiThieu',
 		hideInMenu: true,
 	},
+
 
 	// DANH MUC HE THONG
 	// {

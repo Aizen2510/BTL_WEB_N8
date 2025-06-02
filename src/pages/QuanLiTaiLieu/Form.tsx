@@ -112,7 +112,13 @@ const onCategoryChange = (value: string) => {
   if (value === 'addNew') {
     const newCatName = prompt('Nhập tên danh mục mới:');
     if (newCatName) {
-      const newCat = { id: Date.now().toString(), name: newCatName };
+      const newCat = {
+        id: Date.now().toString(),
+        name: newCatName,
+        categoryId: Date.now().toString(),
+        description: '',
+        documentCount: 0,
+      };
       const updatedCategories = [...categories, newCat];
       setCategories(updatedCategories);
 
@@ -151,17 +157,16 @@ const onCategoryChange = (value: string) => {
         <Input.TextArea rows={3} />
       </Form.Item>
       <Form.Item
-        name="categoryId"
+        name="categoryName"
         label="Danh Mục"
         rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
       >
         <Select onChange={onCategoryChange} placeholder="Chọn danh mục hoặc thêm mới">
           {categories.map((cat) => (
-            <Option key={cat.id} value={cat.id}>
-              {cat.name}
+            <Option key={cat.categoryName} value={cat.categoryName}>
+              {cat.categoryName}
             </Option>
           ))}
-          <Option value="addNew">+ Thêm mới danh mục</Option>
         </Select>
       </Form.Item>
       <Form.Item

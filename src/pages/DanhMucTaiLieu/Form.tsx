@@ -24,24 +24,21 @@ const FormCategory = () => {
         }
     }, [isEdit, row, form]);
 
-    const handleFinish = (values: Category.Record) => {
+    const handleFinish = (values: category.Record) => {
         if (isEdit && row) {
-        // Cập nhật danh mục
         const updated = categories.map((item) =>
-            item.id === row.id ? { ...item, ...values } : item
+            item.categoryId === row.categoryId ? { ...item, ...values } : item
         );
         updateCategories(updated);
         message.success('Cập nhật danh mục thành công');
         } else {
-        // Thêm mới danh mục
-        const { id, ...restValues } = values;
-        const newCategory: Category.Record = {
-            id: Date.now().toString(),
-            ...restValues,
+        const newCategory: category.Record = {
+            categoryId: Date.now().toString(),
+            categoryName: values.categoryName,
+            description: values.description || '',
             documentCount: 0,
         };
-        const newData = [...categories, newCategory];
-        updateCategories(newData);
+        updateCategories([...categories, newCategory]);
         message.success('Thêm danh mục thành công');
         }
 
@@ -54,7 +51,7 @@ const FormCategory = () => {
     return (
         <Form form={form} layout="vertical" onFinish={handleFinish}>
         <Form.Item
-            name="name"
+            name="categoryName"
             label="Tên danh mục"
             rules={[{ required: true, message: 'Vui lòng nhập tên danh mục' }]}
         >

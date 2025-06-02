@@ -1,12 +1,11 @@
 import type { IColumn } from '@/components/Table/typing';
-import { Button, Modal, Table } from 'antd';
+import { Button, Modal, Table,Input } from 'antd';
 import { useEffect } from 'react';
 import { useModel } from 'umi';
 import FormDoc from './Form';
 
 const DocumentManager = () => {
-  const { data, setData, visible, setVisible, row, setRow, isEdit, setIsEdit, getDoc } =
-    useModel('documentManager');
+  const { data,visible,setVisible,row,setRow,isEdit,setIsEdit,setData,getDoc,selectedRowKeys, setSelectedRowKeys,searchText, setSearchText,handleApprove,filteredData, } =useModel('documentManager');
 
   useEffect(() => {
     getDoc();
@@ -32,6 +31,7 @@ const DocumentManager = () => {
 
   const columns: IColumn<Document.Record>[] = [
     { title: 'Tên Tài Liệu', dataIndex: 'title', key: 'title', width: 150 },
+    { title: 'Danh Mục', dataIndex: 'categoryName', key: 'categoryName', width: 100 },
     { title: 'Người Đăng', dataIndex: 'uploaderName', key: 'uploaderName', width: 120 },
     { title: 'Mô Tả', dataIndex: 'description', key: 'description', width: 250 },
     { title: 'Ngày Đăng', dataIndex: 'uploadDate', key: 'uploadDate', width: 150 },
@@ -95,8 +95,28 @@ const DocumentManager = () => {
           Thêm Tài Liệu
         </Button>
       </div>
-
-      <Table rowKey="id" columns={columns} dataSource={data} pagination={{ pageSize: 5 }} />
+      <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
+        <Button disabled={selectedRowKeys.length === 0} onClick={handleApprove}>
+          Duyệt Tài Liệu
+        </Button>
+        <Input.Search
+          placeholder="Tìm kiếm tên, người đăng, mô tả"
+          allowClear
+          style={{ width: 300 }}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
+      </div>
+        <Table
+        rowKey="id"
+        rowSelection={{
+          selectedRowKeys,
+          onChange: setSelectedRowKeys,
+        }}
+        columns={columns}
+        dataSource={filteredData}
+        pagination={{ pageSize: 5 }}
+      />
 
       <Modal
         destroyOnClose

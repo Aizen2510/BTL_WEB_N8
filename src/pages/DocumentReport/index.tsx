@@ -21,18 +21,47 @@ const DashboardOverview: React.FC = () => {
     excelExportRows = [],
   } = useModel('documentReportState');
 
-  // ✅ Dữ liệu mẫu khi rỗng
+  // Dữ liệu mẫu khi rỗng
   const mockCategoryStats = [
     { categoryName: 'Giáo trình', totalDocuments: 12, totalDownloads: 45 },
     { categoryName: 'Bài giảng', totalDocuments: 8, totalDownloads: 27 },
     { categoryName: 'Đề thi', totalDocuments: 5, totalDownloads: 19 },
   ];
 
-  const mockFileTypeStats = [
-    { fileType: 'PDF', totalDocuments: 10 },
-    { fileType: 'DOCX', totalDocuments: 7 },
-    { fileType: 'PPTX', totalDocuments: 8 },
+// Pie chart - Trạng thái phê duyệt
+const approvedStatus = excelExportRows.length
+  ? excelExportRows.reduce(
+      (acc, item) => {
+        if (item.status === 'Đã duyệt') acc.approved++;
+        else if (item.status === 'Từ chối') acc.refused++;
+        else acc.pending++;
+        return acc;
+      },
+      { approved: 0, pending: 0, refused: 0 }
+    )
+  : { approved: 10, pending: 3, refused: 1 }; // mock
+
+  const pieStatusData = [
+    { type: 'Đã duyệt', value: approvedStatus.approved },
+    { type: 'Chờ duyệt', value: approvedStatus.pending },
+    { type: 'Từ chối', value: approvedStatus.refused },
   ];
+
+  const pieConfig = {
+    data: pieStatusData,
+    angleField: 'value',
+    colorField: 'type',
+    radius: 0.9,
+    label: {
+      type: 'inner' as const,
+      offset: '-30%',
+      content: '{value}',
+      style: { fontSize: 14, textAlign: 'center' ,radius: 0.9 },
+    },
+    legend: true,
+    color: ['#16AC66', '#F0C514', '#FF4D4F'], // Màu cho đã duyệt, chờ duyệt và từ chối
+  };
+
 
   const mockTopDownloads = [
     { name: 'Giáo trình Toán cao cấp', value: 18 },
@@ -42,25 +71,12 @@ const DashboardOverview: React.FC = () => {
     { name: 'Bài giảng Hóa học', value: 9 },
   ];
 
+
+
   // 👇 Ưu tiên dữ liệu thật, nếu rỗng thì dùng mock
   const usedCategoryStats = categoryStats.length ? categoryStats : mockCategoryStats;
-  const usedFileTypeStats = fileTypeStats.length ? fileTypeStats : mockFileTypeStats;
   const usedTopDownloads = chartTopDownload.length ? chartTopDownload : mockTopDownloads;
 
-  // Pie chart - Số lượng theo định dạng
-  const pieConfig = {
-    data: usedFileTypeStats.map(item => ({ type: item.fileType, value: item.totalDocuments })),
-    angleField: 'value',
-    colorField: 'type',
-    radius: 0.9,
-    label: {
-      type: 'inner' as const,
-      offset: '-30%',
-      content: '{value}',
-      style: { fontSize: 14, textAlign: 'center' },
-    },
-    legend: false,
-  };
 
   // Bar chart - Top download
   const barTopDownloadsConfig = {
@@ -109,11 +125,12 @@ const DashboardOverview: React.FC = () => {
           </Card>
         </Col>
         <Col span={8}>
-          <Card>
-            <Text strong>Số lượng theo định dạng</Text>
-            <Pie {...pieConfig} height={180} />
-          </Card>
-        </Col>
+        <Card>
+          <Text strong>Trạng thái phê duyệt</Text>
+          <Pie {...pieConfig} height={180} />
+        </Card>
+      </Col>
+
         <Col span={8}>
           <Card>
             <Text strong>Top 5 lượt tải</Text>

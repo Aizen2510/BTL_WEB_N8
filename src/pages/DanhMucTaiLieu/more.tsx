@@ -36,7 +36,11 @@ const CategoryDetail: React.FC<Props> = ({ categoryId }) => {
       title: 'Trạng thái',
       dataIndex: 'isApproved',
       key: 'isApproved',
-      render: (val: boolean) => (val ? 'Đã duyệt' : 'Chờ duyệt'),
+      render: (val: string) => {
+        if (val === 'approved') return 'Đã duyệt';
+        if (val === 'rejected') return 'Từ chối';
+        return 'Chờ duyệt';
+      },
     },
     {
       title: 'Xem',

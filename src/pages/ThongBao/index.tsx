@@ -92,7 +92,7 @@ const ThongBaoPage = (props: { notiType: NotificationType }) => {
 					<ExpandText>
 						{val}{' '}
 						{moment().diff(moment(recordVal?.createdAt), 'days') < 3 ? (
-							<img style={{ width: 30, height: 20 }} src={news} />
+							<img style={{ width: 30, height: 20 }} src={news} alt="New notification"/>
 						) : (
 							''
 						)}

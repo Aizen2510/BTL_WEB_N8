@@ -63,7 +63,7 @@ declare module DocumentReport {
     uploaderId?: string;
     fromDate?: string; // ISO
     toDate?: string;   // ISO
-    isApproved?: 'approved' | 'pending';
+    isApproved?: 'approved' | 'pending' | 'refuse';
   }
 
   /** Dữ liệu xuất Excel */

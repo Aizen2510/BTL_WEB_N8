@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useModel } from 'umi';
 import FormCategory from './Form';
 import CategoryDetail from './more';
+import type { IColumn } from '@/components/Table/typing';
 
 const IndexCategory = () => {
     const {
@@ -18,20 +19,21 @@ const IndexCategory = () => {
     } = useModel('documentCategoryModel');
 
     const [detailVisible, setDetailVisible] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState<Category.Record | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<category.Record | null>(null);
 
     useEffect(() => {
         getCategories();
     }, []);
 
-    const columns = [
-        { title: 'Tên danh mục', dataIndex: 'name', key: 'name' },
-        { title: 'Mô tả', dataIndex: 'description', key: 'description' },
-        { title: 'Số tài liệu', dataIndex: 'documentCount', key: 'documentCount' },
+    const columns: IColumn<category.Record>[] = [
+        { title: 'Tên danh mục', dataIndex: 'categoryName', key: 'categoryName', width: 200 },
+        { title: 'Mô tả', dataIndex: 'description', key: 'description', width: 300 },
+        { title: 'Số tài liệu', dataIndex: 'documentCount', key: 'documentCount', width: 120 },
         {
         title: 'Hành động',
         key: 'action',
-        render: (_: any, record: Category.Record) => (
+        width: 250,
+        render: (_: any, record: category.Record) => (
             <div>
             <Button
                 onClick={() => {
@@ -46,7 +48,7 @@ const IndexCategory = () => {
                 danger
                 style={{ marginLeft: 8 }}
                 onClick={() => {
-                const updated = categories.filter((item) => item.id !== record.id);
+                const updated = categories.filter((item) => item.categoryId !== record.categoryId);
                 updateCategories(updated);
                 }}
             >
@@ -102,9 +104,9 @@ const IndexCategory = () => {
             onCancel={() => setDetailVisible(false)}
             width={800}
             destroyOnClose
-            title={`Danh sách tài liệu thuộc danh mục: ${selectedCategory?.name}`}
+            title={`Danh sách tài liệu thuộc danh mục: ${selectedCategory?.categoryName}`}
         >
-            <CategoryDetail categoryId={selectedCategory?.id ?? ''} />
+            <CategoryDetail categoryId={selectedCategory?.categoryId ?? ''} />
         </Modal>
         </>
     );

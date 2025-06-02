@@ -1,14 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getCategory } from '@/services/documentCategory';
 
-const SAMPLE_DATA = [
-    {
-        id: '1',
-        name: 'Cấu Trúc Dữ Liệu',
-        description: 'Tài liệu về cấu trúc dữ liệu cơ bản',
-        documentCount: 5,
-    },
-];
-
+// Lấy dữ liệu localStorage an toàn
 const safeGetLocalData = (key: string) => {
     try {
         const json = localStorage.getItem(key);
@@ -17,36 +10,45 @@ const safeGetLocalData = (key: string) => {
         if (Array.isArray(data)) return data;
         return null;
     } catch (error) {
-        console.error('Lỗi parse JSON localStorage:', error);
+        console.error('Lỗi parse localStorage:', error);
         return null;
     }
-};
-
-export default () => {
-    const [categories, setCategories] = useState<Category.Record[]>([]); 
-    const [categoryVisible, setCategoryVisible] = useState<boolean>(false);
-    const [categoryIsEdit, setCategoryIsEdit] = useState<boolean>(false);
-    const [categoryRow, setCategoryRow] = useState<Category.Record | undefined>();
-
-    // Load dữ liệu từ localStorage
-    const getCategories = () => {
-        let dataLocal = safeGetLocalData('categories');
-        if (!dataLocal) {
-        localStorage.setItem('categories', JSON.stringify(SAMPLE_DATA));
-        dataLocal = SAMPLE_DATA;
-        }
-        setCategories(dataLocal);
     };
 
-    // Hàm cập nhật categories và lưu localStorage
-    const saveCategories = (newCategories: Category.Record[]) => {
-        setCategories(newCategories);
+    export default function useCategoryModel() {
+    const [categories, setCategoriesState] = useState<category.Record[]>([]);
+    const [categoryVisible, setCategoryVisible] = useState(false);
+    const [categoryIsEdit, setCategoryIsEdit] = useState(false);
+    const [categoryRow, setCategoryRow] = useState<category.Record | undefined>();
+
+    const getCategories = async () => {
+        try {
+        const response = await getCategory();
+        if (response && Array.isArray(response.data)) {
+            setCategoriesState(response.data);
+            localStorage.setItem('categories', JSON.stringify(response.data));
+            return;
+        }
+        throw new Error('Dữ liệu trả về không hợp lệ');
+        } catch (error) {
+        console.warn('Lỗi API, fallback sang localStorage:', error);
+        const localData = safeGetLocalData('categories') || [];
+        setCategoriesState(localData);
+        }
+    };
+
+    const saveCategories = (newCategories: category.Record[]) => {
+        setCategoriesState(newCategories);
         localStorage.setItem('categories', JSON.stringify(newCategories));
     };
 
+    useEffect(() => {
+        getCategories();
+    }, []);
+
     return {
         categories,
-        setCategories: saveCategories, // Thay setter mặc định thành hàm lưu localStorage
+        setCategories: saveCategories,
         categoryVisible,
         setCategoryVisible,
         categoryIsEdit,
@@ -55,4 +57,4 @@ export default () => {
         setCategoryRow,
         getCategories,
     };
-};
+}

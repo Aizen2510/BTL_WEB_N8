@@ -78,7 +78,7 @@ const Login = () => {
 		if (user.role === 'admin') {
 			history.push('/admin');
 		} else {
-			history.push('/home');
+			history.push('/user/home');
 		}
 	};
 
