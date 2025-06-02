@@ -669,7 +669,7 @@ const DocumentList: React.FC = () => {
           <Button type="link" icon={<UploadOutlined />} href="/user/ThaoTacTaiLieu" style={{ color: '#1890ff', fontWeight: 600 }}>Thao tác tài liệu</Button>
         </div>
         <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div className="avatar" onClick={() => window.location.href = '/user/login'} title="Đăng nhập" style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '1px solid #e6e6e6', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'box-shadow 0.2s' }}>
+          <div className="avatar" onClick={() => window.location.href = '/login'} title="Đăng nhập" style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '1px solid #e6e6e6', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'box-shadow 0.2s' }}>
             <img src={require('@/assets/admin.png')} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         </div>

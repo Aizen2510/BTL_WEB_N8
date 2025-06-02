@@ -208,7 +208,7 @@ const StatisticsPage: React.FC = () => {
 
   // Avatar for user
   const handleAvatarClick = () => {
-    window.location.href = '/user/login';
+    window.location.href = '/login';
   };
 
   // Thay các biến tổng số liệu bằng dữ liệu thực tế
