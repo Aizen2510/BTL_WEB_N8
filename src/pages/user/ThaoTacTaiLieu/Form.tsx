@@ -12,7 +12,7 @@ interface DocumentFormProps {
 }
 
 const FormDocument: React.FC<DocumentFormProps> = ({ initialValues, categories }) => {
-  const { setIsModalVisible, selectedDocument, fetchDocuments } = useModel('ThaoTacTaiLieu');
+  const { setIsModalVisible, selectedDocument, fetchDocuments, setDocuments } = useModel('ThaoTacTaiLieu');
   const [form] = Form.useForm();
 
   const normFile = (e: any) => {
@@ -43,13 +43,15 @@ const FormDocument: React.FC<DocumentFormProps> = ({ initialValues, categories }
       if (selectedDocument) {
         await updateDocument(docData);
         message.success('Cập nhật tài liệu thành công!');
+        setIsModalVisible(false);
+        fetchDocuments();
       } else {
         await addDocument(docData);
+        setDocuments((prev: Document[]) => [docData, ...prev]);
         message.success('Thêm tài liệu mới thành công!');
+        setIsModalVisible(false);
+        // KHÔNG gọi fetchDocuments ở đây để tránh ghi đè state vừa cập nhật
       }
-
-      setIsModalVisible(false);
-      fetchDocuments();
     });
   };
 
