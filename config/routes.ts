@@ -80,6 +80,12 @@ export default [
 		component: './DocumentReport',
 		icon: 'BarChartOutlined',
 	},
+	{
+		path: '/usermanagement',
+		name: 'Quản Lý Người Dùng',
+		component: './QuanLiNguoiDung',
+		icon: 'UserOutlined',
+	},
 
 	/*{
 		path: '/themtailieu',

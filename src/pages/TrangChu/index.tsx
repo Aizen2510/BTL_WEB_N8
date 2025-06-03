@@ -76,7 +76,7 @@ const DocumentDashboard: React.FC = () => {
 
   return (
     <div className="p-4">
-      <Title level={3}>Tổng Quan Tài Liệu</Title>
+      <Title level={3}>TỔNG QUAN TÀI LIỆU</Title>
 
       <Row gutter={16} className="mb-4">
         <Col span={8}>

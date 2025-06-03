@@ -1,79 +1,20 @@
-import React, { useState } from 'react';
-import { Button, Form, Input, Modal } from 'antd';
+import { Form, Input, Button, Modal } from 'antd';
+import { useUserLogic } from '@/models/useUserLogic';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useHistory } from 'react-router-dom';
 import remImg from '../../assets/img/remBackround.png';
-
 const Register = () => {
-    const [form] = Form.useForm();
-    const [verificationForm] = Form.useForm();
     const history = useHistory();
-
-    const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
-    const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
-    const [registeredEmail, setRegisteredEmail] = useState('');
-
-    const handleRegister = async (values: any) => {
-        const { username, email, password } = values;
-
-        try {
-            const response = await fetch('http://localhost:8080/auth/signup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    email: email,
-                    password: password,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Đăng ký thất bại');
-            }
-
-            setRegisteredEmail(email);
-            setIsVerificationModalVisible(true);
-        } catch (error) {
-            Modal.error({
-                title: 'Đăng ký thất bại',
-                content: 'Có thể email đã tồn tại hoặc xảy ra lỗi hệ thống.',
-            });
-        }
-    };
-
-    const handleVerification = async (values: any) => {
-        try {
-            const response = await fetch('http://localhost:8080/auth/verify', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: registeredEmail,
-                    verificationCode: values.code, // ✅ Đúng với VerifyUserDto
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Mã xác nhận không đúng');
-            }
-
-            setIsVerificationModalVisible(false);
-            setIsSuccessModalVisible(true);
-        } catch (error) {
-            Modal.error({
-                title: 'Xác minh thất bại',
-                content: 'Mã xác nhận không đúng hoặc đã hết hạn.',
-            });
-        }
-    };
-
-    const handleSuccessModalOk = () => {
-        setIsSuccessModalVisible(false);
-        history.push('/login');
-    };
+    const [form] = Form.useForm();
+    const [otpForm] = Form.useForm();
+    const {
+        handleRegister,
+        handleVerification,
+        isVerificationModalVisible,
+        setIsVerificationModalVisible,
+        isSuccessModalVisible,
+        handleSuccessModalOk,
+    } = useUserLogic();
 
     return (
         <div
@@ -165,7 +106,7 @@ const Register = () => {
                 onCancel={() => setIsVerificationModalVisible(false)}
                 footer={null}
             >
-                <Form form={verificationForm} onFinish={handleVerification}>
+                <Form form={otpForm} onFinish={handleVerification}>
                     <Form.Item
                         name="code"
                         rules={[{ required: true, message: 'Vui lòng nhập mã xác nhận!' }]}
@@ -183,7 +124,7 @@ const Register = () => {
                 title="Đăng ký thành công"
                 visible={isSuccessModalVisible}
                 onOk={handleSuccessModalOk}
-                onCancel={() => setIsSuccessModalVisible(false)}
+                onCancel={() => (false)}
                 okText="Đăng nhập ngay"
                 cancelText="Đóng"
             >

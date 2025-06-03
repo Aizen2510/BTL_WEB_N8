@@ -1,94 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { Form, Input, Button, Checkbox } from 'antd';
+import { useUserLogic } from '@/models/useUserLogic';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
-import { Button, Checkbox, Form, Input, message } from 'antd';
 import { useHistory } from 'react-router-dom';
 const Login = () => {
 	const [form] = Form.useForm();
+	const { handleLogin } = useUserLogic();
 	const history = useHistory();
-	const [count, setCount] = useState<number>(Number(localStorage.getItem('failed')) || 0);
-	const [isVerified, setIsVerified] = useState<boolean>(count < 5);
-
-
-	useEffect(() => {
-		const savedEmail = localStorage.getItem('savedEmail');
-		const savedPassword = localStorage.getItem('savedPassword');
-		const remember = localStorage.getItem('remember') === 'true';
-
-		if (remember && savedEmail && savedPassword) {
-			form.setFieldsValue({
-				email: savedEmail,
-				password: savedPassword,
-				remember: true,
-			});
-		}
-	}, [form]);
-
-	const handleLogin = async (values: any) => {
-		const { email, password, remember } = values;
-
-		// Mock user database
-		const users = [
-			{ email: 'admin@example.com', password: '123456', role: 'admin', enabled: true },
-			{ email: 'user@example.com', password: '123456', role: 'user', enabled: true },
-		];
-
-		const user = users.find(u => u.email === email && u.password === password);
-
-		if (!user) {
-			const newCount = count + 1;
-			setCount(newCount);
-			localStorage.setItem('failed', newCount.toString());
-
-			if (newCount >= 5) {
-				setIsVerified(false);
-			}
-
-			message.error('Sai tài khoản hoặc mật khẩu.');
-			return;
-		}
-
-		if (!user.enabled) {
-			message.warning('Tài khoản chưa được xác minh.');
-			return;
-		}
-
-		if (count >= 5 && !isVerified) {
-			message.error('Vui lòng xác thực Captcha trước khi đăng nhập.');
-			return;
-		}
-
-		localStorage.setItem('token', 'mock-token');
-		localStorage.setItem('role', user.role);
-
-		if (remember) {
-			localStorage.setItem('savedEmail', email);
-			localStorage.setItem('savedPassword', password);
-			localStorage.setItem('remember', 'true');
-		} else {
-			localStorage.removeItem('savedEmail');
-			localStorage.removeItem('savedPassword');
-			localStorage.setItem('remember', 'false');
-		}
-
-		localStorage.removeItem('failed');
-		setCount(0);
-
-		message.success('Đăng nhập thành công!');
-
-		if (user.role === 'admin') {
-			history.push('/admin');
-		} else {
-			history.push('/user/home');
-		}
-	};
-
-	const onVerifyCaptcha = (value: string | null) => {
-		if (value) {
-			setIsVerified(true);
-		}
-	};
-
-	return (
+  	return (
 		<div
 			style={{
 				display: 'flex',
