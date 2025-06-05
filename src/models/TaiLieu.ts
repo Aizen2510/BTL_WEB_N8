@@ -22,20 +22,24 @@ export default function useTaiLieuModel() {
     setCategories(cats.map(c => c.name));
     const types = Array.from(new Set(docs.map(d => d.fileType && d.fileType.toUpperCase ? d.fileType.toUpperCase() : 'Khác')));
     setDocumentTypes(types.length ? types : ['PDF', 'DOCX', 'PPTX', 'XLSX', 'Khác']);
-    setDocuments(docs.map(doc => ({
-      id: doc.id,
-      title: doc.title,
-      category: cats.find(c => c.id === doc.category)?.name || doc.category,
-      subcategory: '',
-      type: doc.fileType && doc.fileType.toUpperCase ? doc.fileType.toUpperCase() : 'Khác',
-      size: doc.fileSize ? `${(doc.fileSize / 1024 / 1024).toFixed(1)} MB` : '',
-      uploadedBy: doc.uploadedBy,
-      uploadDate: doc.uploadDate,
-      downloads: doc.downloadCount,
-      status: doc.status === 'approved' ? 'Đã duyệt' : doc.status === 'pending' ? 'Chờ duyệt' : 'Đã từ chối',
-      description: doc.description,
-      fileUrl: doc.fileUrl,
-    })));
+    setDocuments(
+      docs
+        .filter(doc => doc.status === 'approved')
+        .map(doc => ({
+          id: doc.id,
+          title: doc.title,
+          category: cats.find(c => c.id === doc.category)?.name || doc.category,
+          subcategory: '',
+          type: doc.fileType && doc.fileType.toUpperCase ? doc.fileType.toUpperCase() : 'Khác',
+          size: doc.fileSize ? `${(doc.fileSize / 1024 / 1024).toFixed(1)} MB` : '',
+          uploadedBy: doc.uploadedBy,
+          uploadDate: doc.uploadDate,
+          downloads: doc.downloadCount,
+          status: doc.status === 'approved' ? 'Đã duyệt' : doc.status === 'pending' ? 'Chờ duyệt' : 'Đã từ chối',
+          description: doc.description,
+          fileUrl: doc.fileUrl,
+        }))
+    );
   }, []);
 
   function diffDocuments(prev: any[], curr: any[]) {

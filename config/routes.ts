@@ -30,7 +30,13 @@ export default [
 				name: 'Thao tác tài liệu',
 				component: './user/ThaoTacTaiLieu',
 				layout: false,
-			}
+			},
+			{
+				path: '/user/usermanagement',
+				name: 'Quản Lý Người Dùng',
+				component: './user/QuanLiNguoiDung',
+				icon: 'UserOutlined',
+			},
 		],
 	},
 

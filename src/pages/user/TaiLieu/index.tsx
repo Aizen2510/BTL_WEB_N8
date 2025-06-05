@@ -28,8 +28,6 @@ const DocumentsPage: React.FC = () => {
     setLoading,
     searchText,
     setSearchText,
-    selectedCategory,
-    setSelectedCategory,
     selectedType,
     setSelectedType,
     previewVisible,
@@ -41,8 +39,13 @@ const DocumentsPage: React.FC = () => {
     showNotifications,
     setShowNotifications,
     notifications,
-    setNotifications,
   } = useTaiLieuModel();
+
+  // Tính tổng số lượt tải xuống của tất cả tài liệu (ưu tiên downloads, fallback downloadCount)
+  const totalDownloads = documents.reduce(
+    (sum, doc) => sum + (doc.downloads || doc.downloadCount || 0),
+    0
+  );
 
   // Get file icon based on type
   const getFileIcon = (type: string) => {
@@ -99,7 +102,6 @@ const DocumentsPage: React.FC = () => {
   // Reset filters
   const resetFilters = () => {
     setSearchText('');
-    setSelectedCategory(null);
     setSelectedType(null);
   };
 
@@ -129,17 +131,6 @@ const DocumentsPage: React.FC = () => {
       render: (text: string) => <span>{text}</span>,
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (text: string) => {
-        let color = 'green';
-        if (text === 'Chờ duyệt') color = 'orange';
-        if (text === 'Đã từ chối') color = 'red';
-        return <Tag color={color}>{text}</Tag>;
-      },
-    },
-    {
       title: 'Ngày tải lên',
       dataIndex: 'uploadDate',
       key: 'uploadDate',
@@ -149,7 +140,8 @@ const DocumentsPage: React.FC = () => {
       title: 'Lượt tải',
       dataIndex: 'downloads',
       key: 'downloads',
-      sorter: (a: any, b: any) => a.downloads - b.downloads,
+      sorter: (a: any, b: any) => (a.downloads || a.downloadCount || 0) - (b.downloads || b.downloadCount || 0),
+      render: (_: any, record: any) => record.downloads ?? record.downloadCount ?? 0,
     },
     {
       title: 'Thao tác',
@@ -189,7 +181,7 @@ const DocumentsPage: React.FC = () => {
   const menu = (
     <div className={styles.headerMenu}>
       <Button type="link" icon={<HomeOutlined />} href="/user/Home" style={{ fontWeight: 600 }}>Trang chủ</Button>
-      <Button type="link" icon={<FileSearchOutlined />} href="/user/TaiLieu" style={{  color: '#1890ff', fontWeight: 600 }}>Tài liệu</Button>
+      <Button type="link" icon={<FileSearchOutlined />} href="/user/TaiLieu" style={{ color: '#1890ff', fontWeight: 600 }}>Tài liệu</Button>
       <Button type="link" icon={<BarChartOutlined />} href="/user/ThongKe" style={{ fontWeight: 600 }}>Thống kê</Button>
       <Button type="link" icon={<UploadOutlined />} href="/user/ThaoTacTaiLieu" style={{ fontWeight: 600 }}>Thao tác tài liệu</Button>
     </div>
@@ -221,8 +213,6 @@ const DocumentsPage: React.FC = () => {
       handleAvatarClick={handleAvatarClick}
       searchText={searchText}
       setSearchText={setSearchText}
-      selectedCategory={selectedCategory}
-      setSelectedCategory={setSelectedCategory}
       selectedType={selectedType}
       setSelectedType={setSelectedType}
       categories={categories}
@@ -238,6 +228,7 @@ const DocumentsPage: React.FC = () => {
       handlePreview={handlePreview}
       handleDownload={handleDownload}
       getFileIcon={getFileIcon}
+      totalDownloads={totalDownloads}
     />
   );
 };

@@ -1,4 +1,5 @@
-import { Form, Input, Button, Select,  Space, message, Upload } from 'antd';
+import React from 'react';
+import { Form, Input, Button, Space, message, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useModel } from 'umi';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,9 +12,8 @@ interface DocumentFormProps {
   categories: Category[];
 }
 
-const FormDocument: React.FC<DocumentFormProps> = ({ initialValues, categories }) => {
+const FormDocument: React.FC<DocumentFormProps & { form: any }> = ({ initialValues, categories, form }) => {
   const { setIsModalVisible, selectedDocument, fetchDocuments, setDocuments } = useModel('ThaoTacTaiLieu');
-  const [form] = Form.useForm();
 
   const normFile = (e: any) => {
     if (Array.isArray(e)) {
@@ -36,7 +36,7 @@ const FormDocument: React.FC<DocumentFormProps> = ({ initialValues, categories }
         fileType: '',
         fileSize: 0, // Truyền 0 để đúng kiểu Document, không hiển thị trên UI
         downloadCount: selectedDocument ? selectedDocument.downloadCount : 0,
-        status: values.status,
+        status: selectedDocument ? selectedDocument.status : 'pending',
         fileUrl: fileUrl || '',
       };
 
@@ -47,7 +47,7 @@ const FormDocument: React.FC<DocumentFormProps> = ({ initialValues, categories }
         fetchDocuments();
       } else {
         await addDocument(docData);
-        setDocuments((prev: Document[]) => [docData, ...prev]);
+        setDocuments((prev: Document[]) => [...prev, docData]); // Thêm mới vào cuối danh sách
         message.success('Thêm tài liệu mới thành công!');
         setIsModalVisible(false);
         // KHÔNG gọi fetchDocuments ở đây để tránh ghi đè state vừa cập nhật
@@ -119,18 +119,6 @@ const FormDocument: React.FC<DocumentFormProps> = ({ initialValues, categories }
         >
           <Button icon={<UploadOutlined />}>Chọn tệp</Button>
         </Upload>
-      </Form.Item>
-
-      <Form.Item
-        name="status"
-        label="Trạng thái"
-        rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-      >
-        <Select>
-          <Select.Option value="pending">Chờ duyệt</Select.Option>
-          <Select.Option value="approved">Đã duyệt</Select.Option>
-          <Select.Option value="rejected">Từ chối</Select.Option>
-        </Select>
       </Form.Item>
 
       <Form.Item>

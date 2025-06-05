@@ -93,6 +93,7 @@ const HomePage: React.FC = () => {
         stats={stats}
         recentDocuments={recentDocuments}
         categoryData={categoryData}
+        documents={documents} // truyền thêm prop documents
       />
     </PageContainer>
   );
