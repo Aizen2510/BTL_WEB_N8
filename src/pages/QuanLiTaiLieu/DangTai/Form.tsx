@@ -9,11 +9,7 @@ const { Option } = Select;
 const FormDoc = () => {
   const [form] = Form.useForm();
   const { data, setData, row, isEdit, setVisible, getDoc } = useModel('documentManager');
-    const {
-    categories,
-    getCategories,
-    setCategories,
-  } = useModel('documentCategoryModel');
+  const {categories,getCategories,setCategories,} = useModel('documentCategoryModel');
 
 
   // Trạng thái upload file (lưu file url tạm thời)
@@ -113,9 +109,8 @@ const onCategoryChange = (value: string) => {
     const newCatName = prompt('Nhập tên danh mục mới:');
     if (newCatName) {
       const newCat = {
-        id: Date.now().toString(),
-        name: newCatName,
         categoryId: Date.now().toString(),
+        categoryName: newCatName,
         description: '',
         documentCount: 0,
       };
@@ -125,7 +120,7 @@ const onCategoryChange = (value: string) => {
       // Lưu vào localStorage
       localStorage.setItem('categories', JSON.stringify(updatedCategories));
 
-      form.setFieldsValue({ categoryId: newCat.id });
+      form.setFieldsValue({ categoryId: newCat.categoryId });
     } else {
       form.setFieldsValue({ categoryId: undefined });
     }
@@ -161,7 +156,7 @@ const onCategoryChange = (value: string) => {
         label="Danh Mục"
         rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
       >
-        <Select onChange={onCategoryChange} placeholder="Chọn danh mục hoặc thêm mới">
+        <Select onChange={onCategoryChange} placeholder="Chọn danh mục ">
           {categories.map((cat) => (
             <Option key={cat.categoryName} value={cat.categoryName}>
               {cat.categoryName}
@@ -191,20 +186,6 @@ const onCategoryChange = (value: string) => {
         >
           <Button icon={<UploadOutlined />}>Chọn File</Button>
         </Upload>
-      </Form.Item>
-
-      <Form.Item
-        name="fileType"
-        label="Loại File"
-        rules={[{ required: true, message: 'Vui lòng chọn loại file' }]}
-      >
-        <Select placeholder="Chọn loại file">
-          <Option value="pdf">PDF</Option>
-          <Option value="docx">DOCX</Option>
-          <Option value="pptx">PPTX</Option>
-          <Option value="xlsx">XLSX</Option>
-          <Option value="other">Khác</Option>
-        </Select>
       </Form.Item>
 
       <Form.Item>

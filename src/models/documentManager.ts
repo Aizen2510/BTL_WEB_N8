@@ -1,8 +1,8 @@
+// 📁 src/models/documentManager.ts
 import { useState, useEffect } from 'react';
 import { getDataDoc } from '@/services/DocumentManaget';
 import { useModel } from 'umi';
 
-// Lấy dữ liệu localStorage an toàn
 const safeGetLocalData = (key: string) => {
 	try {
 		const json = localStorage.getItem(key);
@@ -21,17 +21,11 @@ const safeGetLocalData = (key: string) => {
 	const [visible, setVisible] = useState(false);
 	const [isEdit, setIsEdit] = useState(false);
 	const [row, setRow] = useState<Document.Record | undefined>();
-	const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 	const [searchText, setSearchText] = useState('');
 
-	// Lấy categories từ model category
 	const { categories } = useModel('documentCategoryModel');
 
-	// Map categoryName vào document theo categoryId
-	const mapCategoryNameToDocs = (
-		docs: Document.Record[],
-		cats: category.Record[],
-	) => {
+	const mapCategoryNameToDocs = (docs: Document.Record[], cats: category.Record[]) => {
 		return docs.map((doc) => {
 		const cat = cats.find((c) => c.categoryId === doc.categoryId);
 		return {
@@ -65,7 +59,6 @@ const safeGetLocalData = (key: string) => {
 		localStorage.setItem('data', JSON.stringify(mappedData));
 	};
 
-	// Cập nhật document khi categories thay đổi
 	useEffect(() => {
 		if (data.length > 0 && categories.length > 0) {
 		const updatedData = mapCategoryNameToDocs(data, categories);
@@ -73,20 +66,11 @@ const safeGetLocalData = (key: string) => {
 		}
 	}, [categories]);
 
-	const handleApprove = () => {
-		const updated = data.map((item) =>
-		selectedRowKeys.includes(item.id) && item.isApproved === 'pending'
-			? { ...item, isApproved: 'approved' as 'approved' }
-			: item,
-		);
-		saveData(updated);
-		setSelectedRowKeys([]);
-	};
 
 	const filteredData = data.filter((item) =>
 		[item.title, item.uploaderName, item.description].some((field) =>
-		field?.toLowerCase().includes(searchText.toLowerCase()),
-		),
+		field?.toLowerCase().includes(searchText.toLowerCase())
+		)
 	);
 
 	useEffect(() => {
@@ -103,11 +87,8 @@ const safeGetLocalData = (key: string) => {
 		isEdit,
 		setIsEdit,
 		getDoc,
-		selectedRowKeys,
-		setSelectedRowKeys,
 		searchText,
 		setSearchText,
-		handleApprove,
 		filteredData,
 	};
 }

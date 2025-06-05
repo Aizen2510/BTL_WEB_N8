@@ -5,7 +5,7 @@ import { useModel } from 'umi';
 import FormDoc from './Form';
 
 const DocumentManager = () => {
-  const { data,visible,setVisible,row,setRow,isEdit,setIsEdit,setData,getDoc,selectedRowKeys, setSelectedRowKeys,searchText, setSearchText,handleApprove,filteredData, } =useModel('documentManager');
+  const { data,visible,setVisible,row,setRow,isEdit,setIsEdit,setData,getDoc,searchText, setSearchText,filteredData, } =useModel('documentManager');
 
   useEffect(() => {
     getDoc();
@@ -36,13 +36,7 @@ const DocumentManager = () => {
     { title: 'Mô Tả', dataIndex: 'description', key: 'description', width: 250 },
     { title: 'Ngày Đăng', dataIndex: 'uploadDate', key: 'uploadDate', width: 150 },
     { title: 'Lượt Tải', dataIndex: 'downloadCount', key: 'downloadCount', width: 50 },
-    {
-      title: 'Trạng Thái',
-      dataIndex: 'isApproved',
-      key: 'isApproved',
-      width: 120,
-      render: (value) => (value === 'approved' ? 'Đã Duyệt' : 'Chờ Duyệt'),
-    },
+
     {
       title: 'Hành Động',
       width: 200,
@@ -96,9 +90,6 @@ const DocumentManager = () => {
         </Button>
       </div>
       <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
-        <Button disabled={selectedRowKeys.length === 0} onClick={handleApprove}>
-          Duyệt Tài Liệu
-        </Button>
         <Input.Search
           placeholder="Tìm kiếm tên, người đăng, mô tả"
           allowClear
@@ -109,10 +100,6 @@ const DocumentManager = () => {
       </div>
         <Table
         rowKey="id"
-        rowSelection={{
-          selectedRowKeys,
-          onChange: setSelectedRowKeys,
-        }}
         columns={columns}
         dataSource={filteredData}
         pagination={{ pageSize: 5 }}

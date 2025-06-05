@@ -65,8 +65,19 @@ export default [
 	{
 		path: '/documentmanaget',
 		name: 'Quản Lí Tài Liệu',
-		component: './QuanLiTaiLieu',
 		icon: 'FormOutlined',
+		routes: [
+			{
+				path: '/documentmanaget/upload',
+				name: 'Tài Liệu',
+				component: './QuanLiTaiLieu/DangTai',
+			},
+			{
+				path: '/documentmanaget/browse',
+				name: 'Kiểm Duyệt Tài Liệu',
+				component: './QuanLiTaiLieu/Duyet',
+			},
+		],
 	},
 	{
 		path: '/category',
