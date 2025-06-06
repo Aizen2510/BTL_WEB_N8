@@ -15,7 +15,7 @@ import {
   BarChartOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import { Button, Tag, Space, Dropdown, Menu } from 'antd';
+import { Button, Tag, Space } from 'antd';
 import ThongbaoPopover from '@/components/Thongbao';
 import useTaiLieuModel from '@/models/TaiLieu';
 
@@ -114,7 +114,15 @@ const DocumentsPage: React.FC = () => {
       render: (text: string, record: any) => (
         <Space>
           {getFileIcon(record.type)}
-          <a onClick={() => handlePreview(record)}>{text}</a>
+          <a
+            href={record.fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ cursor: 'pointer' }}
+            // KHÔNG có thuộc tính download để chỉ mở xem, không tải về
+          >
+            {text}
+          </a>
         </Space>
       ),
     },
@@ -151,27 +159,30 @@ const DocumentsPage: React.FC = () => {
           <Button
             type="text"
             icon={<EyeOutlined />}
-            onClick={() => handlePreview(record)}
+            onClick={() => {
+              if (record.fileUrl) {
+                const url = record.fileUrl;
+                const ext = (url.split('.').pop() || '').toLowerCase();
+                if (['pdf', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(ext)) {
+                  window.open(url, '_blank', 'noopener');
+                } else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
+                  // Sử dụng Google Docs Viewer
+                  window.open(`https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`, '_blank', 'noopener');
+                } else {
+                  window.open(url, '_blank', 'noopener');
+                }
+              }
+            }}
             title="Xem trước"
+            disabled={!record.fileUrl}
           />
           <Button
             type="text"
             icon={<DownloadOutlined />}
             onClick={() => handleDownload(record.id)}
             title="Tải xuống"
+            disabled={!record.fileUrl}
           />
-          <Dropdown
-            overlay={
-              <Menu>
-                <Menu.Item key="1">Xem chi tiết</Menu.Item>
-                <Menu.Item key="2">Chia sẻ</Menu.Item>
-                <Menu.Item key="3">Báo cáo</Menu.Item>
-              </Menu>
-            }
-            trigger={['click']}
-          >
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
         </Space>
       ),
     },

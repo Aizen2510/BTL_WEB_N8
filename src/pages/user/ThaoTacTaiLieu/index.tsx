@@ -25,6 +25,7 @@ import {
   FileSearchOutlined,
   UploadOutlined,
   BellOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import moment from 'moment';
 import type { ColumnsType } from 'antd/es/table';
@@ -152,7 +153,9 @@ const DocumentList: React.FC = () => {
       key: 'action',
       render: (_, record) => (
         <Space size="small">
-          <Button icon={<EyeOutlined />} size="small" href={record.fileUrl} target="_blank" />
+          <a href={record.fileUrl} target="_blank" rel="noopener noreferrer" download>
+            <Button icon={<DownloadOutlined />} size="small" />
+          </a>
           <Button icon={<EditOutlined />} size="small" onClick={() => showModal(record)} />
           <Popconfirm
             title="Xác nhận xóa tài liệu này?"

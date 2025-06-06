@@ -15,17 +15,26 @@ interface DocumentFormProps {
 const FormDocument: React.FC<DocumentFormProps & { form: any }> = ({ initialValues, categories, form }) => {
   const { setIsModalVisible, selectedDocument, fetchDocuments, setDocuments } = useModel('ThaoTacTaiLieu');
 
-  const normFile = (e: any) => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e && e.fileList;
-  };
+  const normFile = (e: any) => (Array.isArray(e) ? e : e?.fileList);
 
   const handleSubmit = () => {
     form.validateFields().then(async (values: any) => {
       const fileObj = values.file && values.file[0];
-      const fileUrl = fileObj && (fileObj.url || (fileObj.originFileObj && URL.createObjectURL(fileObj.originFileObj)));
+      let fileUrl = '';
+
+      if (fileObj) {
+        if (fileObj.url) {
+          fileUrl = fileObj.url;
+        } else if (fileObj.originFileObj) {
+          fileUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(fileObj.originFileObj);
+          });
+        }
+      }
+
       const docData: Document = {
         id: selectedDocument ? selectedDocument.id : uuidv4(),
         title: values.title,
@@ -34,24 +43,23 @@ const FormDocument: React.FC<DocumentFormProps & { form: any }> = ({ initialValu
         uploadedBy: values.uploadedBy,
         uploadDate: selectedDocument ? selectedDocument.uploadDate : moment().format('DD/MM/YYYY'),
         fileType: '',
-        fileSize: 0, // Truyền 0 để đúng kiểu Document, không hiển thị trên UI
+        fileSize: 0,
         downloadCount: selectedDocument ? selectedDocument.downloadCount : 0,
-        status: selectedDocument ? selectedDocument.status : 'pending',
+        status: selectedDocument ? selectedDocument.status : 'pending', // Gán mặc định "pending" khi thêm mới
         fileUrl: fileUrl || '',
       };
 
       if (selectedDocument) {
         await updateDocument(docData);
         message.success('Cập nhật tài liệu thành công!');
-        setIsModalVisible(false);
         fetchDocuments();
       } else {
         await addDocument(docData);
-        setDocuments((prev: Document[]) => [...prev, docData]); // Thêm mới vào cuối danh sách
+        setDocuments((prev: Document[]) => [...prev, docData]);
         message.success('Thêm tài liệu mới thành công!');
-        setIsModalVisible(false);
-        // KHÔNG gọi fetchDocuments ở đây để tránh ghi đè state vừa cập nhật
       }
+
+      setIsModalVisible(false);
     });
   };
 
@@ -85,9 +93,7 @@ const FormDocument: React.FC<DocumentFormProps & { form: any }> = ({ initialValu
         label="Danh mục"
         rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
       >
-        <Input
-          placeholder="Tên danh mục"
-        />
+        <Input placeholder="Tên danh mục" />
       </Form.Item>
 
       <Form.Item
@@ -108,14 +114,12 @@ const FormDocument: React.FC<DocumentFormProps & { form: any }> = ({ initialValu
         <Upload
           name="file"
           customRequest={({ file, onSuccess }) => {
-            // Giả lập upload, thực tế bạn gọi API upload ở đây
-            const realFile = file as File;
             setTimeout(() => {
-              onSuccess && onSuccess({ url: URL.createObjectURL(realFile) });
+              onSuccess && onSuccess({ url: URL.createObjectURL(file as File) });
             }, 500);
           }}
           maxCount={1}
-          beforeUpload={() => false} // Không upload tự động
+          beforeUpload={() => false}
         >
           <Button icon={<UploadOutlined />}>Chọn tệp</Button>
         </Upload>

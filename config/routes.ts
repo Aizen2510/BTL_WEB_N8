@@ -71,7 +71,7 @@ export default [
 	{
 		path: '/documentmanaget',
 		name: 'Quản Lí Tài Liệu',
-		component: './QuanLiTaiLieu',
+		component: './QuanLiTaiLieu/DangTai',
 		icon: 'FormOutlined',
 	},
 	{
