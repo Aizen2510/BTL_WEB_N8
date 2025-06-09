@@ -1,18 +1,20 @@
 export interface Document {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  uploadedBy: string;
-  uploadDate: string;
-  fileType: string;
-  fileSize: number;
-  downloadCount: number;
-  status: 'pending' | 'approved' | 'rejected';
-  fileUrl: string;
+        id: string;
+        title: string;
+        description: string;
+        fileUrl: string;
+        categoryId: String;
+        categoryName: String;
+        uploaderId: string;
+        uploaderName?: string;
+        uploadDate: string; // ISO string
+        downloadCount: number;
+        isApproved: 'approved' | 'pending' | 'rejected';
 }
 
 export interface Category {
-  id: string;
-  name: string;
+  categoryId: string,
+  categoryName: string,
+  description: string,
+  documentCount: number,
 }

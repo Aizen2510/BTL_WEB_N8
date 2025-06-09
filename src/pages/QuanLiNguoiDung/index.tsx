@@ -1,14 +1,15 @@
-import { Button, Modal, Table, Avatar, Tag, Input, Space } from 'antd';
+import { Button, Modal, Table, Avatar, Tag, Input, Space, message } from 'antd';
 import { useEffect } from 'react';
 import { useModel } from 'umi';
 import type { IColumn } from '@/components/Table/typing';
+import axios from 'axios';
 
-const UserManagement = () => {
-	const {data,getDataUserManagement,search,setSearch,} = useModel('usermanagement');
+const UserManagementPage = () => {
+	const { data, getDataUserManagement, search, setSearch } = useModel('usermanagement');
 
 	useEffect(() => {
 		getDataUserManagement();
-	}, [search]); 
+	}, [search]);
 
 	const columns: IColumn<UserManagement.User>[] = [
 		{
@@ -31,11 +32,13 @@ const UserManagement = () => {
 			title: 'Số Lượng Tải xuống',
 			dataIndex: 'downloadCount',
 			width: 100,
+			render: (count) => count || 0,
 		},
 		{
 			title: 'Số Lượng Tải lên',
 			dataIndex: 'uploadCount',
 			width: 100,
+			render: (count) => count || 0,
 		},
 		{
 			title: 'Trạng thái',
@@ -50,30 +53,29 @@ const UserManagement = () => {
 		{
 			title: 'Thao tác',
 			width: 180,
-			render: (record) => (
-				<>
-					<Button
-						style={{ alignItems: 'center'}}
-						danger
-						onClick={() => {
-							const dataLocal = JSON.parse(localStorage.getItem('users') || '[]');
-							const newData = dataLocal.filter((item: UserManagement.User) => item.id !== record.id);
-							localStorage.setItem('users', JSON.stringify(newData));
+			render: (_, record) => (
+				<Button
+					danger
+					onClick={async () => {
+						try {
+							await axios.delete(`/api/users/${record.id}`);
+							message.success('Đã xoá người dùng thành công');
 							getDataUserManagement();
-						}}
-					>
-						Xóa Người Dùng
-					</Button>
-				</>
+						} catch (error) {
+							message.error('Lỗi khi xoá người dùng');
+							console.error(error);
+						}
+					}}
+				>
+					Xóa Người Dùng
+				</Button>
 			),
 		},
 	];
 
 	return (
 		<div>
-            <div>
-                <h1>QUẢN LÍ NGƯỜI DÙNG</h1>
-            </div>
+			<h1>QUẢN LÝ NGƯỜI DÙNG</h1>
 			<Space style={{ marginBottom: 16, width: '30%' }} direction="vertical">
 				<Input.Search
 					placeholder="Tìm kiếm theo tên hoặc email"
@@ -88,4 +90,4 @@ const UserManagement = () => {
 	);
 };
 
-export default UserManagement;
+export default UserManagementPage;

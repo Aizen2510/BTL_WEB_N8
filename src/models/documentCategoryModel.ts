@@ -13,33 +13,69 @@ const safeGetLocalData = (key: string) => {
         console.error('Lỗi parse localStorage:', error);
         return null;
     }
-    };
+};
 
-    export default function useCategoryModel() {
+// Lấy số lượng tài liệu trong danh mục
+const getDocumentCount = (categoryId: string): number => {
+    try {
+        const rawData = localStorage.getItem('data') || '[]';
+        const allDocs = JSON.parse(rawData);
+        return allDocs.filter((doc: any) => doc.categoryId === categoryId).length;
+    } catch (error) {
+        console.error('Lỗi khi đếm số tài liệu:', error);
+        return 0;
+    }
+};
+
+export default function useCategoryModel() {
     const [categories, setCategoriesState] = useState<category.Record[]>([]);
     const [categoryVisible, setCategoryVisible] = useState(false);
     const [categoryIsEdit, setCategoryIsEdit] = useState(false);
     const [categoryRow, setCategoryRow] = useState<category.Record | undefined>();
+    const [searchText, setSearchText] = useState('');
+    const [detailVisible, setDetailVisible] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<category.Record | null>(null);
 
     const getCategories = async () => {
         try {
-        const response = await getCategory();
-        if (response && Array.isArray(response.data)) {
-            setCategoriesState(response.data);
-            localStorage.setItem('categories', JSON.stringify(response.data));
-            return;
-        }
-        throw new Error('Dữ liệu trả về không hợp lệ');
+            const response = await getCategory();
+            if (response && Array.isArray(response.data)) {
+                // Cập nhật documentCount cho mỗi danh mục
+                const updatedCategories = response.data.map(category => ({
+                    ...category,
+                    documentCount: getDocumentCount(category.categoryId)
+                }));
+                setCategoriesState(updatedCategories);
+                localStorage.setItem('categories', JSON.stringify(updatedCategories));
+                return;
+            }
+            throw new Error('Dữ liệu trả về không hợp lệ');
         } catch (error) {
-        console.warn('Lỗi API, fallback sang localStorage:', error);
-        const localData = safeGetLocalData('categories') || [];
-        setCategoriesState(localData);
+            console.warn('Lỗi API, fallback sang localStorage:', error);
+            const localData = safeGetLocalData('categories') || [];
+            // Cập nhật documentCount cho dữ liệu local
+            const updatedLocalData = localData.map((category: category.Record) => ({
+                ...category,
+                documentCount: getDocumentCount(category.categoryId)
+            }));
+            setCategoriesState(updatedLocalData);
         }
     };
 
+    // Lọc danh mục theo tên hoặc mô tả
+    const filteredCategories = categories.filter((cat) =>
+        [cat.categoryName, cat.description]
+            .some((field) => field?.toLowerCase().includes(searchText.toLowerCase()))
+    );
+
     const saveCategories = (newCategories: category.Record[]) => {
-        setCategoriesState(newCategories);
-        localStorage.setItem('categories', JSON.stringify(newCategories));
+        // Cập nhật documentCount trước khi lưu
+        const updatedCategories = newCategories.map(category => ({
+            ...category,
+            documentCount: getDocumentCount(category.categoryId)
+        }));
+        setCategoriesState(updatedCategories);
+        localStorage.setItem('categories', JSON.stringify(updatedCategories));
     };
 
     useEffect(() => {
@@ -56,5 +92,8 @@ const safeGetLocalData = (key: string) => {
         categoryRow,
         setCategoryRow,
         getCategories,
+        searchText,
+        setSearchText,
+        filteredCategories,
     };
 }

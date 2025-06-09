@@ -106,3 +106,56 @@ declare module ThongBao {
 		phanHe?: ESourceTypeNotification;
 	} & Record<string, any>;
 }
+
+export function notifyAdmin({ type, title, content }) {
+	const adminNotifications = JSON.parse(localStorage.getItem('adminNotifications') || '[]');
+	adminNotifications.push({
+		id: Date.now() + Math.random(),
+		type,
+		title,
+		content,
+		createdAt: new Date().toISOString(),
+		read: false,
+	});
+	localStorage.setItem('adminNotifications', JSON.stringify(adminNotifications));
+}
+
+export function notifyUser({ type, title, content, userId }) {
+	const userNotifications = JSON.parse(localStorage.getItem('userNotifications') || '[]');
+	userNotifications.push({
+		id: Date.now() + Math.random(),
+		type,
+		title,
+		content,
+		createdAt: new Date().toISOString(),
+		read: false,
+		userId,
+	});
+	localStorage.setItem('userNotifications', JSON.stringify(userNotifications));
+}
+
+export function notifyAllUsers({ type, title, content }) {
+	const users = JSON.parse(localStorage.getItem('users') || '[]');
+	const userNotifications = JSON.parse(localStorage.getItem('userNotifications') || '[]');
+	users.forEach((u) => {
+		userNotifications.push({
+			id: Date.now() + Math.random(),
+			type,
+			title,
+			content,
+			createdAt: new Date().toISOString(),
+			read: false,
+			userId: u.id,
+		});
+	});
+	localStorage.setItem('userNotifications', JSON.stringify(userNotifications));
+}
+
+export function getAdminNotifications() {
+	return JSON.parse(localStorage.getItem('adminNotifications') || '[]');
+}
+
+export function getUserNotifications(currentUserId) {
+	const all = JSON.parse(localStorage.getItem('userNotifications') || '[]');
+	return all.filter(n => n.userId === currentUserId);
+}

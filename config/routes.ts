@@ -20,17 +20,17 @@ export default [
 				component: './user/TaiLieu',
 			},
 			{
-				path: '/user/thongke',
-				name: 'Thống kê',
-				component: './user/ThongKe',
+				path: '/user/danhmuc',
+				name: 'Danh mục',
 				layout: false,
+				component: './user/DanhMuc',
 			},
 			{
 				path: '/user/thaotactailieu',
 				name: 'Thao tác tài liệu',
 				component: './user/ThaoTacTaiLieu',
 				layout: false,
-			}
+			},
 		],
 	},
 

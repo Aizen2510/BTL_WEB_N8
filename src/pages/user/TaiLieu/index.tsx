@@ -1,83 +1,56 @@
-import React, { useEffect, useState } from 'react';
-import { PageContainer } from '@ant-design/pro-layout';
+import React, { useState, useEffect } from 'react';
+import TaiLieuContent from './TaiLieu';
+import styles from './index.less';
+import type { IColumn } from '@/components/Table/typing';
 import {
-  Card,
-  Table,
-  Tag,
-  Space,
-  Button,
-  Input,
-  Select,
-  DatePicker,
-  Row,
-  Col,
-  Typography,
-  Tooltip,
-  Dropdown,
-  Menu,
-  Divider,
-  Modal,
-} from 'antd';
-import {
-  UploadOutlined,
   DownloadOutlined,
-  SearchOutlined,
-  FilterOutlined,
-  FileTextOutlined,
+  EyeOutlined,
   BookOutlined,
-  FileExcelOutlined,
   FileWordOutlined,
   FilePptOutlined,
-  EyeOutlined,
+  FileExcelOutlined,
   FileUnknownOutlined,
   MoreOutlined,
   HomeOutlined,
   FileSearchOutlined,
   BarChartOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
-import { getDocuments, getCategories } from '@/services/ThaoTacTaiLieu/index';
-import type { Document, Category } from '@/services/ThaoTacTaiLieu/typings';
-import styles from './index.less';
-
-const { Title, Text } = Typography;
-const { Option } = Select;
-const { RangePicker } = DatePicker;
+import { Button, Tag, Space } from 'antd';
+import useTaiLieuModel from '@/models/TaiLieu';
+import useUserNotification from '@/models/userNotification';
+import NoticeIcon from '@/components/RightContent/NoticeIcon';
 
 const DocumentsPage: React.FC = () => {
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState<any>(null);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [documentTypes, setDocumentTypes] = useState<string[]>([]);
+  // Lấy toàn bộ state và logic từ model
+  const {
+    documents,
+    setDocuments,
+    loading,
+    setLoading,
+    searchText,
+    setSearchText,
+    selectedType,
+    setSelectedType,
+    previewVisible,
+    setPreviewVisible,
+    previewDocument,
+    setPreviewDocument,
+    categories,
+    documentTypes,
+    showNotifications,
+    setShowNotifications,
+  } = useTaiLieuModel();
 
-  useEffect(() => {
-    // Lấy dữ liệu thật từ localStorage
-    const docs: Document[] = getDocuments();
-    const cats: Category[] = getCategories();
-    setCategories(cats.map(c => c.name));
-    // Lấy các loại fileType duy nhất
-    const types = Array.from(new Set(docs.map(d => d.fileType && d.fileType.toUpperCase ? d.fileType.toUpperCase() : 'Khác')));
-    setDocumentTypes(types.length ? types : ['PDF', 'DOCX', 'PPTX', 'XLSX', 'Khác']);
-    // Chuyển đổi dữ liệu cho bảng
-    setDocuments(docs.map(doc => ({
-      id: doc.id,
-      title: doc.title,
-      category: cats.find(c => c.id === doc.category)?.name || doc.category,
-      subcategory: '',
-      type: doc.fileType && doc.fileType.toUpperCase ? doc.fileType.toUpperCase() : 'Khác',
-      size: doc.fileSize ? `${(doc.fileSize / 1024 / 1024).toFixed(1)} MB` : '',
-      uploadedBy: doc.uploadedBy,
-      uploadDate: doc.uploadDate,
-      downloads: doc.downloadCount,
-      status: doc.status === 'approved' ? 'Đã duyệt' : doc.status === 'pending' ? 'Chờ duyệt' : 'Đã từ chối',
-      description: doc.description,
-      fileUrl: doc.fileUrl,
-    })));
-  }, []);
+  // Lấy userId hiện tại (giả sử lưu trong localStorage)
+  const currentUserId = localStorage.getItem('currentUserId') || '';
+  const { notifications, unread, markAllAsRead } = useUserNotification();
+
+  // Tính tổng số lượt tải xuống của tất cả tài liệu (ưu tiên downloads, fallback downloadCount)
+  const totalDownloads = documents.reduce(
+    (sum, doc) => sum + (doc.downloads || doc.downloadCount || 0),
+    0
+  );
 
   // Get file icon based on type
   const getFileIcon = (type: string) => {
@@ -103,14 +76,39 @@ const DocumentsPage: React.FC = () => {
 
   // Handle document download
   const handleDownload = (id: number) => {
-    console.log(`Downloading document with ID: ${id}`);
-    // In a real app, this would trigger a file download
+    const doc = documents.find((d) => d.id === id);
+    if (doc && doc.fileUrl) {
+      try {
+        // Cập nhật số lượt tải trong localStorage
+        const rawData = localStorage.getItem('data') || '[]';
+        const allDocs = JSON.parse(rawData);
+        const updatedDocs = allDocs.map((d: any) => {
+          if (d.id === id) {
+            return {
+              ...d,
+              downloads: (d.downloads || 0) + 1,
+              downloadCount: (d.downloadCount || 0) + 1
+            };
+          }
+          return d;
+        });
+        localStorage.setItem('data', JSON.stringify(updatedDocs));
+
+        // Cập nhật state
+        setDocuments((prevDocs: any[]) =>
+          prevDocs.map((d) =>
+            d.id === id ? { ...d, downloads: (d.downloads || 0) + 1, downloadCount: (d.downloadCount || 0) + 1 } : d
+          )
+        );
+      } catch (error) {
+        console.error('Lỗi khi tải xuống:', error);
+      }
+    }
   };
 
   // Handle filter change
   const handleFilterChange = () => {
     setLoading(true);
-    // Simulate API call with filters
     setTimeout(() => {
       setLoading(false);
     }, 500);
@@ -119,100 +117,64 @@ const DocumentsPage: React.FC = () => {
   // Reset filters
   const resetFilters = () => {
     setSearchText('');
-    setSelectedCategory(null);
     setSelectedType(null);
   };
 
   // Configure table columns
-  const columns = [
-    {
-      title: 'Tài liệu',
-      dataIndex: 'title',
-      key: 'title',
-      render: (text: string, record: any) => (
-        <Space>
-          {getFileIcon(record.type)}
-          <a onClick={() => handlePreview(record)}>{text}</a>
-        </Space>
-      ),
-    },
-    {
-      title: 'Danh mục',
-      dataIndex: 'category',
-      key: 'category',
-      render: (text: string) => <Tag color="blue">{text}</Tag>,
-    },
-    {
-      title: 'Người đăng tải',
-      dataIndex: 'uploadedBy',
-      key: 'uploadedBy',
-      render: (text: string) => <span>{text}</span>,
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (text: string) => {
-        let color = 'green';
-        if (text === 'Chờ duyệt') color = 'orange';
-        if (text === 'Đã từ chối') color = 'red';
-        return <Tag color={color}>{text}</Tag>;
+  const columns: IColumn<Document.Record>[] = [
+      { title: 'Tên Tài Liệu', dataIndex: 'title', key: 'title', width: 150 },
+      {
+        title: 'Danh Mục',
+        dataIndex: 'categoryId',
+        key: 'categoryId',
+        width: 100,
+        render: (categoryId: string) => {
+          const cats = JSON.parse(localStorage.getItem('categories') || '[]');
+          const found = cats.find((cat: any) => cat.categoryId === categoryId || cat.id === categoryId);
+          return found ? (found.categoryName || found.name) : categoryId;
+        }
       },
-    },
-    {
-      title: 'Ngày tải lên',
-      dataIndex: 'uploadDate',
-      key: 'uploadDate',
-      sorter: (a: any, b: any) => new Date(a.uploadDate).getTime() - new Date(b.uploadDate).getTime(),
-    },
-    {
-      title: 'Lượt tải',
-      dataIndex: 'downloads',
-      key: 'downloads',
-      sorter: (a: any, b: any) => a.downloads - b.downloads,
-    },
-    {
-      title: 'Thao tác',
-      key: 'action',
-      render: (_: any, record: any) => (
-        <Space size="middle">
-          <Tooltip title="Xem trước">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => handlePreview(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Tải xuống">
-            <Button
-              type="text"
-              icon={<DownloadOutlined />}
-              onClick={() => handleDownload(record.id)}
-            />
-          </Tooltip>
-          <Dropdown
-            overlay={
-              <Menu>
-                <Menu.Item key="1">Xem chi tiết</Menu.Item>
-                <Menu.Item key="2">Chia sẻ</Menu.Item>
-                <Menu.Item key="3">Báo cáo</Menu.Item>
-              </Menu>
-            }
-            trigger={['click']}
-          >
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
-        </Space>
-      ),
-    },
+      { title: 'Người Đăng', dataIndex: 'uploaderName', key: 'uploaderName', width: 120 },
+      { title: 'Mô Tả', dataIndex: 'description', key: 'description', width: 250 },
+      { title: 'Ngày Đăng', dataIndex: 'uploadDate', key: 'uploadDate', width: 150 },
+      { 
+        title: 'Lượt Tải', 
+        dataIndex: 'downloadCount', 
+        key: 'downloadCount', 
+        width: 50,
+        sorter: (a: any, b: any) => (a.downloads || a.downloadCount || 0) - (b.downloads || b.downloadCount || 0),
+        render: (_: any, record: any) => record.downloads ?? record.downloadCount ?? 0
+      },
+      {
+        title: 'File',
+        dataIndex: 'fileUrl',
+        key: 'fileUrl',
+        align: 'center',
+        width: 120,
+        render: (text, record) => {
+          const filePath = record.fileUrl
+            ? record.fileUrl.replace('http://localhost:3000/uploads/', '')
+            : '';
+          return record.fileUrl ? (
+            <a
+              href={`http://localhost:3000/download/${encodeURIComponent(filePath)}`}
+              onClick={() => handleDownload(Number(record.id))}
+            >
+              <Button icon={<DownloadOutlined />} />
+            </a>
+          ) : (
+            'Chưa có file'
+          );
+        },
+      },
   ];
 
   // Header navigation menu
   const menu = (
     <div className={styles.headerMenu}>
-      <Button type="link" icon={<HomeOutlined />} href="/user/Home" style={{ fontWeight: 600 }}>Trang chủ</Button>
-      <Button type="link" icon={<FileSearchOutlined />} href="/user/TaiLieu" style={{  color: '#1890ff', fontWeight: 600 }}>Tài liệu</Button>
-      <Button type="link" icon={<BarChartOutlined />} href="/user/ThongKe" style={{ fontWeight: 600 }}>Thống kê</Button>
+      <Button type="link" icon={<HomeOutlined />} href="/user/Home" style={{fontWeight: 600 }}>Trang chủ</Button>
+      <Button type="link" icon={<FileSearchOutlined />} href="/user/TaiLieu" style={{ fontWeight: 600 }}>Tài liệu</Button>
+      <Button type="link" icon={<FileSearchOutlined />} href="/user/DanhMuc" style={{ fontWeight: 600 }}>Danh mục</Button>
       <Button type="link" icon={<UploadOutlined />} href="/user/ThaoTacTaiLieu" style={{ fontWeight: 600 }}>Thao tác tài liệu</Button>
     </div>
   );
@@ -222,157 +184,69 @@ const DocumentsPage: React.FC = () => {
     window.location.href = '/login';
   };
 
+  // Click notification: chuyển hướng đến TaiLieu với id/type
+  const handleNotificationClick = (id: string, type: string) => {
+    window.location.href = `/user/TaiLieu?id=${id}&type=${type}`;
+  };
+
+  function getDocumentsWithCategoryName() {
+    const localCategories = JSON.parse(localStorage.getItem('categories') || '[]');
+    let localDocuments = JSON.parse(localStorage.getItem('documents') || '[]');
+    localDocuments = localDocuments.map((doc: any) => {
+      if (!doc.categoryName) {
+        const found = localCategories.find(
+          (cat: any) => cat.categoryId === doc.categoryId || cat.id === doc.categoryId
+        );
+        return {
+          ...doc,
+          categoryName: found ? (found.categoryName || found.name) : doc.categoryId,
+        };
+      }
+      return doc;
+    });
+    return localDocuments;
+  }
+
+  useEffect(() => {
+    setDocuments(getDocumentsWithCategoryName());
+  }, []);
+
   return (
-    <PageContainer pageHeaderRender={false}>
-      <div className={styles.stickyHeader}>
-        {menu}
-        <div className={styles.headerRight}>
-          <div className={styles.avatar} onClick={handleAvatarClick} title="Đăng nhập">
-            <img src={require('@/assets/admin.png')} alt="avatar" />
-          </div>
-        </div>
-      </div>
-      <div className={styles.documentsContainer}>
-        {/* Filters section */}
-        <Card bordered={false} className={styles.filterCard}>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Input
-                placeholder="Tìm kiếm tài liệu"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                prefix={<SearchOutlined />}
-                allowClear
-              />
-            </Col>
-            <Col span={5}>
-              <Select
-                placeholder="Danh mục"
-                style={{ width: '100%' }}
-                allowClear
-                value={selectedCategory}
-                onChange={(value) => setSelectedCategory(value)}
-              >
-                {categories.map((category) => (
-                  <Option key={category} value={category}>
-                    {category}
-                  </Option>
-                ))}
-              </Select>
-            </Col>
-            <Col span={4}>
-              <Select
-                placeholder="Loại tài liệu"
-                style={{ width: '100%' }}
-                allowClear
-                value={selectedType}
-                onChange={(value) => setSelectedType(value)}
-              >
-                {documentTypes.map((type) => (
-                  <Option key={type} value={type}>
-                    {type}
-                  </Option>
-                ))}
-              </Select>
-            </Col>
-            <Col span={7}>
-              <Space>
-                <RangePicker
-                  placeholder={['Từ ngày', 'Đến ngày']}
-                />
-                <Button type="primary" icon={<FilterOutlined />} onClick={handleFilterChange}>
-                  Lọc
-                </Button>
-                <Button onClick={resetFilters}>Đặt lại</Button>
-              </Space>
-            </Col>
-          </Row>
-        </Card>
-
-        {/* Documents table */}
-        <Card bordered={false} className={styles.tableCard}>
-          <Table
-            columns={columns}
-            dataSource={documents}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              defaultPageSize: 10,
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50'],
-              showTotal: (total) => `Tổng cộng ${total} tài liệu`,
-            }}
-          />
-        </Card>
-
-        {/* Document preview modal */}
-        <Modal
-          title={previewDocument?.title}
-          visible={previewVisible}
-          onCancel={() => setPreviewVisible(false)}
-          footer={[
-            <Button key="download" type="primary" icon={<DownloadOutlined />} onClick={() => handleDownload(previewDocument?.id)}>
-              Tải xuống
-            </Button>,
-            <Button key="close" onClick={() => setPreviewVisible(false)}>
-              Đóng
-            </Button>,
-          ]}
-          width={800}
-        >
-          {previewDocument && (
-            <div className={styles.previewContainer}>
-              <Row gutter={[16, 16]}>
-                <Col span={24}>
-                  <div className={styles.previewHeader}>
-                    <Space>
-                      {getFileIcon(previewDocument.type)}
-                      <Title level={4}>{previewDocument.title}</Title>
-                    </Space>
-                  </div>
-                </Col>
-                <Col span={24}>
-                  <Divider />
-                </Col>
-                <Col span={12}>
-                  <div className={styles.previewInfo}>
-                    <p><strong>Danh mục:</strong> {previewDocument.category}</p>
-                    <p><strong>Loại:</strong> {previewDocument.type}</p>
-                    <p><strong>Kích thước:</strong> {previewDocument.size}</p>
-                    <p><strong>Người tải lên:</strong> {previewDocument.uploadedBy}</p>
-                  </div>
-                </Col>
-                <Col span={12}>
-                  <div className={styles.previewInfo}>
-                    <p><strong>Ngày tải lên:</strong> {previewDocument.uploadDate}</p>
-                    <p><strong>Lượt tải:</strong> {previewDocument.downloads}</p>
-                    <p><strong>Trạng thái:</strong> <Tag color="green">{previewDocument.status}</Tag></p>
-                  </div>
-                </Col>
-                <Col span={24}>
-                  <Divider />
-                </Col>
-                <Col span={24}>
-                  <div className={styles.previewDescription}>
-                    <Title level={5}>Mô tả</Title>
-                    <Text>{previewDocument.description}</Text>
-                  </div>
-                </Col>
-                <Col span={24}>
-                  <div className={styles.previewFrame}>
-                    {/* Placeholder for document preview */}
-                    <div className={styles.previewPlaceholder}>
-                      <FileTextOutlined style={{ fontSize: 64 }} />
-                      <p>Bản xem trước tài liệu</p>
-                    </div>
-                  </div>
-                </Col>
-              </Row>
-            </div>
-          )}
-        </Modal>
-      </div>
-    </PageContainer>
+    <TaiLieuContent
+      menu={menu}
+      notificationContent={
+        <NoticeIcon
+          count={unread}
+          onClear={markAllAsRead}
+          list={notifications}
+          title="Thông báo"
+          emptyText="Bạn đã xem tất cả thông báo"
+          showClear={!!unread}
+          showViewMore={false}
+        />
+      }
+      showNotifications={showNotifications}
+      setShowNotifications={setShowNotifications}
+      handleAvatarClick={handleAvatarClick}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      selectedType={selectedType}
+      setSelectedType={setSelectedType}
+      categories={categories}
+      documentTypes={documentTypes}
+      handleFilterChange={handleFilterChange}
+      resetFilters={resetFilters}
+      columns={columns}
+      documents={documents}
+      loading={loading}
+      previewVisible={previewVisible}
+      setPreviewVisible={setPreviewVisible}
+      previewDocument={previewDocument}
+      handlePreview={handlePreview}
+      handleDownload={handleDownload}
+      getFileIcon={getFileIcon}
+      totalDownloads={totalDownloads}
+    />
   );
 };
 

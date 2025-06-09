@@ -34,7 +34,7 @@ const IndexCategory = () => {
         key: 'action',
         width: 250,
         render: (_: any, record: category.Record) => (
-            <div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
             <Button
                 onClick={() => {
                 setCategoryRow(record);
@@ -55,7 +55,7 @@ const IndexCategory = () => {
                 Xoá
             </Button>
             <Button
-                type="link"
+                style={{ marginLeft: 8 }}
                 onClick={() => {
                 setSelectedCategory(record);
                 setDetailVisible(true);

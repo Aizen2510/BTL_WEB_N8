@@ -73,6 +73,15 @@ const safeGetLocalData = (key: string) => {
 		)
 	);
 
+	const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+	const myDocuments = filteredData.filter(
+		(item) =>
+			item.uploaderId === currentUser.id ||
+			item.uploaderName === currentUser.username // tuỳ theo bạn lưu id hay username
+	);
+
+	const approvedDocuments = myDocuments.filter(doc => doc.isApproved === 'approved');
+
 	useEffect(() => {
 		getDoc();
 	}, []);
@@ -90,5 +99,7 @@ const safeGetLocalData = (key: string) => {
 		searchText,
 		setSearchText,
 		filteredData,
+		myDocuments,
+		approvedDocuments,
 	};
 }

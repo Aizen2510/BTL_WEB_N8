@@ -25,6 +25,41 @@ const CategoryDetail: React.FC<Props> = ({ categoryId }) => {
     setLoading(false);
   }, [categoryId]);
 
+  // Hàm cập nhật lượt tải xuống
+  const handleDownload = (id: number) => {
+    try {
+      // Cập nhật lượt tải trong localStorage
+      const rawData = localStorage.getItem('data') || '[]';
+      const allDocs = JSON.parse(rawData);
+      const updatedDocs = allDocs.map((d: any) => {
+        if (d.id === id) {
+          return {
+            ...d,
+            downloads: (d.downloads || 0) + 1,
+            downloadCount: (d.downloadCount || 0) + 1,
+          };
+        }
+        return d;
+      });
+      localStorage.setItem('data', JSON.stringify(updatedDocs));
+
+      // Cập nhật state
+      setDocuments((prevDocs: any[]) =>
+        prevDocs.map((d) =>
+          d.id === id
+            ? {
+                ...d,
+                downloads: (d.downloads || 0) + 1,
+                downloadCount: (d.downloadCount || 0) + 1,
+              }
+            : d
+        )
+      );
+    } catch (error) {
+      console.error('Lỗi khi tải xuống:', error);
+    }
+  };
+
   const columns: TableColumnType<Document.Record>[] = [
     { title: 'Tên tài liệu', dataIndex: 'title', key: 'title' },
     { title: 'Người đăng', dataIndex: 'uploaderName', key: 'uploaderName' },
@@ -45,14 +80,26 @@ const CategoryDetail: React.FC<Props> = ({ categoryId }) => {
       },
     },
     {
-      title: 'Hành Động',
-      key: 'action',
-      align: 'center' as const,
-      render: (_: any, record: Document.Record) => (
-        <a href={record.fileUrl} target="_blank" rel="noopener noreferrer">
-          <Button icon={<DownloadOutlined />}></Button>
-        </a>
-      ),
+      title: 'File',
+      dataIndex: 'fileUrl',
+      key: 'fileUrl',
+      align: 'center',
+      width: 120,
+      render: (text, record) => {
+        const filePath = record.fileUrl
+          ? record.fileUrl.replace('http://localhost:3000/uploads/', '')
+          : '';
+        return record.fileUrl ? (
+          <a
+            href={`http://localhost:3000/download/${encodeURIComponent(filePath)}`}
+            onClick={() => handleDownload(Number(record.id))}
+          >
+            <Button icon={<DownloadOutlined />} />
+          </a>
+        ) : (
+          'Chưa có file'
+        );
+      },
     },
   ];
 

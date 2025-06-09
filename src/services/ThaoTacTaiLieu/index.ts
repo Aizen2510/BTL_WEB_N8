@@ -7,6 +7,15 @@ export const STORAGE_KEYS = {
   CURRENT_USER: 'current_user',
 };
 
+// Dữ liệu danh mục mặc định
+const DEFAULT_CATEGORIES: Category[] = [
+  { id: '1', name: 'Tài liệu học tập' },
+  { id: '2', name: 'Tài liệu nghiên cứu' },
+  { id: '3', name: 'Tài liệu tham khảo' },
+  { id: '4', name: 'Tài liệu chuyên ngành' },
+  { id: '5', name: 'Tài liệu khác' }
+];
+
 // ----------------------------
 // TÀI LIỆU (Document)
 // ----------------------------
@@ -78,10 +87,15 @@ export const incrementDownloadCount = (docId: string): void => {
 export const getCategories = (): Category[] => {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) {
+      // Nếu chưa có dữ liệu, lưu dữ liệu mặc định
+      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(DEFAULT_CATEGORIES));
+      return DEFAULT_CATEGORIES;
+    }
+    return JSON.parse(stored);
   } catch (error) {
     console.error('Lỗi khi lấy danh mục:', error);
-    return [];
+    return DEFAULT_CATEGORIES;
   }
 };
 

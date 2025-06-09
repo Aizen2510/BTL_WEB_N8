@@ -1,9 +1,10 @@
+// src/services/interfaceUser/User.ts
 declare module UserManagement {
     export interface User {
         id: string;
         username: string;// hien thi o pro file
         password: string;
-        role: 'user';
+        role: 'admin' | 'user';
         enabled: boolean;
         email: string; // hien thi o pro file
         avatarUrl?: string; // hien thi o pro file

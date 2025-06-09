@@ -1,8 +1,10 @@
 import type { IColumn } from '@/components/Table/typing';
-import { Button, Modal, Table,Input } from 'antd';
+import { Button, Modal, Table,Input,  } from 'antd';
 import { useEffect } from 'react';
 import { useModel } from 'umi';
 import FormDoc from './Form';
+import {DownloadOutlined,} from '@ant-design/icons';
+import { notifyUser } from '@/utils/notification';
 
 const DocumentManager = () => {
   const { data,visible,setVisible,row,setRow,isEdit,setIsEdit,setData,getDoc,searchText, setSearchText,filteredData, } =useModel('documentManager');
@@ -10,6 +12,7 @@ const DocumentManager = () => {
   useEffect(() => {
     getDoc();
   }, []);
+
 
   const handleDelete = (record: Document.Record) => {
     const dataLocal = (() => {
@@ -57,22 +60,21 @@ const DocumentManager = () => {
           </Button>
         </div>
       ),
-    },{
-		
-  title: 'File',
-  dataIndex: 'fileUrl',
-  key: 'fileUrl',
-  width: 120,
-  render: (text, record) => (
-    record.fileUrl ? (
-      <a href={record.fileUrl} target="_blank" rel="noopener noreferrer" download>
-        Xem/Tải file
-      </a>
-    ) : 'Chưa có file'
-  ),
-},
-
-	
+    },
+    {
+      title: 'File',
+      dataIndex: 'fileUrl',
+      key: 'fileUrl',
+      align: 'center',
+      width: 120,
+      render: (text, record) => (
+        record.fileUrl ? (
+          <a href={record.fileUrl} target="_blank" rel="noopener noreferrer" download>
+            <Button icon={<DownloadOutlined />}></Button>
+          </a>
+        ) : 'Chưa có file'
+      ),
+    },
   ];
 
   return (
@@ -101,7 +103,7 @@ const DocumentManager = () => {
         <Table
         rowKey="id"
         columns={columns}
-        dataSource={filteredData}
+        dataSource={filteredData.filter(doc => doc.isApproved === 'approved')}
         pagination={{ pageSize: 5 }}
       />
 

@@ -63,10 +63,58 @@
 }
 
 .carouselItem {
+  position: relative;
   height: 320px;
+  background-image: url('https://glints.com/vn/blog/wp-content/uploads/2023/05/tinh-chinh-xac.jpg');
+  background-size: cover;
+  background-position: center;
   padding: 0 24px;
   color: #fff;
+  overflow: hidden;
 }
+
+.carouselItem::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(98, 95, 95, 0.268); /* Mờ đen 40% */
+  z-index: 1;
+}
+
+.carouselItem > * {
+  position: relative;
+  z-index: 2;
+}
+.carouselItem2 {
+  position: relative;
+  height: 320px;
+  background-image: url('https://file1.hutech.edu.vn/file/editor/quocte/shutterstock_346701608-1024x667.jpg');
+  background-size: cover;
+  background-position: center;
+  padding: 0 24px;
+  color: #fff;
+  overflow: hidden;
+}
+
+.carouselItem2::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(98, 95, 95, 0.268); /* Mờ đen 40% */
+  z-index: 1;
+}
+
+.carouselItem2 > * {
+  position: relative;
+  z-index: 2;
+}
+
 
 .carouselImage {
   display: flex;
@@ -74,19 +122,13 @@
   justify-content: center;
 }
 
-.imagePlaceholder {
-  width: 280px;
-  height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  color: white;
-}
+
 
 .statsRow {
   margin-bottom: 24px;
+  flex-direction: row;
+  display: flex;
+  justify-content: space-between;
 }
 
 .recentDocsCard,

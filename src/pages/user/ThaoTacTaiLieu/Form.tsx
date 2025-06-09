@@ -1,146 +1,176 @@
-import { Form, Input, Button, Select,  Space, message, Upload } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Button, DatePicker, Form, Input, Select, Upload, message } from 'antd';
+import { useEffect, useState } from 'react';
 import { useModel } from 'umi';
-import { v4 as uuidv4 } from 'uuid';
-import { Document, Category } from '@/services/ThaoTacTaiLieu/typings';
-import { addDocument, updateDocument } from '@/services/ThaoTacTaiLieu/index';
-import moment from 'moment';
+import dayjs from 'dayjs';
+import { UploadOutlined } from '@ant-design/icons';
+import { notifyAdmin } from '@/utils/notification';
 
-interface DocumentFormProps {
-  initialValues: Document | null;
-  categories: Category[];
-}
+const { Option } = Select;
 
-const FormDocument: React.FC<DocumentFormProps> = ({ initialValues, categories }) => {
-  const { setIsModalVisible, selectedDocument, fetchDocuments } = useModel('ThaoTacTaiLieu');
+const FormDocUser = () => {
   const [form] = Form.useForm();
+  const { data, setData, row, isEdit, setVisible, getDoc } = useModel('documentManager');
+  const { categories, getCategories, setCategories } = useModel('documentCategoryModel');
+  const [fileList, setFileList] = useState<any[]>([]);
 
-  const normFile = (e: any) => {
-    if (Array.isArray(e)) {
-      return e;
+  const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+  useEffect(() => {
+    if (isEdit && row) {
+      form.setFieldsValue({
+        ...row,
+        uploadDate: dayjs(row.uploadDate),
+        categoryId: row.categoryId,
+      });
+      if (row.fileUrl) {
+        setFileList([
+          {
+            uid: '-1',
+            name: row.title,
+            status: 'done',
+            url: row.fileUrl,
+          },
+        ]);
+      }
+    } else {
+      form.resetFields();
+      setFileList([]);
+      form.setFieldsValue({ uploaderName: user.username || 'ADMIN' });
     }
-    return e && e.fileList;
+  }, [row, isEdit]);
+
+  const onUploadChange = ({ fileList: newFileList }: any) => {
+    setFileList(newFileList);
   };
 
-  const handleSubmit = () => {
-    form.validateFields().then(async (values: any) => {
-      const fileObj = values.file && values.file[0];
-      const fileUrl = fileObj && (fileObj.url || (fileObj.originFileObj && URL.createObjectURL(fileObj.originFileObj)));
-      const docData: Document = {
-        id: selectedDocument ? selectedDocument.id : uuidv4(),
-        title: values.title,
-        description: values.description,
-        category: values.category,
-        uploadedBy: values.uploadedBy,
-        uploadDate: selectedDocument ? selectedDocument.uploadDate : moment().format('DD/MM/YYYY'),
-        fileType: '',
-        fileSize: 0, // Truyền 0 để đúng kiểu Document, không hiển thị trên UI
-        downloadCount: selectedDocument ? selectedDocument.downloadCount : 0,
-        status: values.status,
-        fileUrl: fileUrl || '',
+  const saveData = (values: any, fileUrl: string) => {
+    const dataLocal: Document.Record[] = JSON.parse(localStorage.getItem('data') || '[]');
+    const category = categories.find(cat => cat.categoryId === values.categoryId);
+
+    if (isEdit) {
+      const updated = dataLocal.map((item) =>
+        item.id === row?.id
+          ? {
+              ...item,
+              ...values,
+              uploadDate: values.uploadDate.format('YYYY-MM-DD'),
+              fileUrl,
+              categoryName: category?.categoryName || '',
+              fileType: values.fileType || 'other',
+            }
+          : item,
+      );
+      localStorage.setItem('data', JSON.stringify(updated));
+      message.success('Cập nhật tài liệu thành công!');
+    } else {
+      const newItem: Document.Record = {
+        id: Date.now().toString(),
+        ...values,
+        uploaderName: user.username || 'ADMIN',
+        uploadDate: values.uploadDate.format('YYYY-MM-DD'),
+        fileUrl,
+        downloadCount: 0,
+        isApproved: user.username === 'ADMIN' ? 'approved' : 'pending',
+        categoryName: category?.categoryName || '',
+        fileType: values.fileType || 'other',
       };
+      localStorage.setItem('data', JSON.stringify([newItem, ...dataLocal]));
+      message.success('Thêm tài liệu thành công!');
+    }
 
-      if (selectedDocument) {
-        await updateDocument(docData);
-        message.success('Cập nhật tài liệu thành công!');
+    getDoc();
+    setVisible(false);
+
+    // Gửi thông báo cho admin nếu là user
+    if (user.username !== 'admin') {
+      notifyAdmin({
+        type: 'upload_doc',
+        title: 'Tài liệu mới chờ duyệt',
+        content: `Người dùng ${user.username} vừa đăng tài liệu "${values.title}".`
+      });
+    }
+  };
+
+  const onFinish = (values: any) => {
+    if (!fileList.length) {
+      message.error('Vui lòng tải lên file tài liệu');
+      return;
+    }
+
+    let fileUrl = '';
+    if (fileList[0].url) {
+      fileUrl = fileList[0].url;
+    } else if (fileList[0].originFileObj) {
+      const reader = new FileReader();
+      reader.readAsDataURL(fileList[0].originFileObj);
+      reader.onload = () => {
+        fileUrl = reader.result as string;
+        saveData(values, fileUrl);
+      };
+      return;
+    }
+
+    saveData(values, fileUrl);
+  };
+
+  const onCategoryChange = (value: string) => {
+    if (value === 'addNew') {
+      const newCatName = prompt('Nhập tên danh mục mới:');
+      if (newCatName) {
+        const newCat = {
+          categoryId: Date.now().toString(),
+          categoryName: newCatName,
+          description: '',
+          documentCount: 0,
+        };
+        const updatedCategories = [...categories, newCat];
+        setCategories(updatedCategories);
+        localStorage.setItem('categories', JSON.stringify(updatedCategories));
+        form.setFieldsValue({ categoryId: newCat.categoryId });
       } else {
-        await addDocument(docData);
-        message.success('Thêm tài liệu mới thành công!');
+        form.setFieldsValue({ categoryId: undefined });
       }
-
-      setIsModalVisible(false);
-      fetchDocuments();
-    });
+    }
   };
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={handleSubmit}
-      initialValues={{
-        ...selectedDocument,
-      }}
-    >
-      <Form.Item
-        name="title"
-        label="Tiêu đề tài liệu"
-        rules={[{ required: true, message: 'Vui lòng nhập tiêu đề tài liệu!' }]}
-      >
-        <Input placeholder="Nhập tiêu đề tài liệu" />
+    <Form layout="vertical" form={form} onFinish={onFinish}>
+      <Form.Item name="title" label="Tên Tài Liệu" rules={[{ required: true }]}>
+        <Input />
       </Form.Item>
-
-      <Form.Item
-        name="description"
-        label="Mô tả"
-        rules={[{ required: true, message: 'Vui lòng nhập mô tả!' }]}
-      >
-        <Input.TextArea placeholder="Nhập mô tả chi tiết" rows={4} />
+      <Form.Item name="description" label="Mô Tả" rules={[{ required: true }]}>
+        <Input.TextArea rows={3} />
       </Form.Item>
-
-      <Form.Item
-        name="category"
-        label="Danh mục"
-        rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
-      >
-        <Input
-          placeholder="Tên danh mục"
-        />
-      </Form.Item>
-
-      <Form.Item
-        name="uploadedBy"
-        label="Người đăng tải"
-        rules={[{ required: true, message: 'Vui lòng nhập người đăng!' }]}
-      >
-        <Input placeholder="Nhập tên người đăng" />
-      </Form.Item>
-
-      <Form.Item
-        name="file"
-        label="Tệp tài liệu"
-        valuePropName="fileList"
-        getValueFromEvent={normFile}
-        rules={[{ required: true, message: 'Vui lòng tải lên tệp tài liệu!' }]}
-      >
-        <Upload
-          name="file"
-          customRequest={({ file, onSuccess }) => {
-            // Giả lập upload, thực tế bạn gọi API upload ở đây
-            const realFile = file as File;
-            setTimeout(() => {
-              onSuccess && onSuccess({ url: URL.createObjectURL(realFile) });
-            }, 500);
-          }}
-          maxCount={1}
-          beforeUpload={() => false} // Không upload tự động
-        >
-          <Button icon={<UploadOutlined />}>Chọn tệp</Button>
-        </Upload>
-      </Form.Item>
-
-      <Form.Item
-        name="status"
-        label="Trạng thái"
-        rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-      >
-        <Select>
-          <Select.Option value="pending">Chờ duyệt</Select.Option>
-          <Select.Option value="approved">Đã duyệt</Select.Option>
-          <Select.Option value="rejected">Từ chối</Select.Option>
+      <Form.Item name="categoryId" label="Danh Mục" rules={[{ required: true }]}>
+        <Select onChange={onCategoryChange}>
+          {categories.map((cat) => (
+            <Option key={cat.categoryId} value={cat.categoryId}>
+              {cat.categoryName}
+            </Option>
+          ))}
         </Select>
       </Form.Item>
-
+      <Form.Item name="uploadDate" label="Ngày Đăng" rules={[{ required: true }]}>
+        <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+      </Form.Item>
+      <Form.Item name="fileUpload" label="Tải Lên File" rules={[{ required: true }]}>
+        <Upload
+          beforeUpload={() => false}
+          onChange={onUploadChange}
+          fileList={fileList}
+          accept=".pdf,.docx,.pptx,.xlsx"
+          maxCount={1}
+        >
+          <Button icon={<UploadOutlined />}>Chọn File</Button>
+        </Upload>
+      </Form.Item>
       <Form.Item>
-        <Space>
-          <Button type="primary" htmlType="submit">
-            {selectedDocument ? 'Cập nhật' : 'Thêm mới'}
-          </Button>
-          <Button onClick={() => setIsModalVisible(false)}>Hủy</Button>
-        </Space>
+        <Button type="primary" htmlType="submit" block>
+          {isEdit ? 'Cập nhật' : 'Thêm'}
+        </Button>
       </Form.Item>
     </Form>
   );
 };
 
-export default FormDocument;
+export default FormDocUser;

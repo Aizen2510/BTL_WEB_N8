@@ -3,44 +3,39 @@ import { Row, Col, Card, Typography, Button } from 'antd';
 import { Pie, Bar } from '@ant-design/plots';
 import { DownloadOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
-import { useModel } from 'umi';
 
 const { Title, Text } = Typography;
 
-type CategoryStatistic = {
-  categoryName: string;
-  totalDocuments: number;
-  totalDownloads: number;
-};
-
 const DashboardOverview: React.FC = () => {
-  const {
-    categoryStats = [],
-    fileTypeStats = [],
-    chartTopDownload = [],
-    excelExportRows = [],
-  } = useModel('documentReportState');
+  // Lấy dữ liệu từ localStorage
+  const documents = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('data') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
+  const categories = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('categories') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
 
-  // Dữ liệu mẫu khi rỗng
-  const mockCategoryStats = [
-    { categoryName: 'Giáo trình', totalDocuments: 12, totalDownloads: 45 },
-    { categoryName: 'Bài giảng', totalDocuments: 8, totalDownloads: 27 },
-    { categoryName: 'Đề thi', totalDocuments: 5, totalDownloads: 19 },
-  ];
+  // Tổng số tài liệu đã duyệt
+  const totalDocuments = documents.filter((doc: any) => doc.isApproved === 'approved').length;
 
-// Pie chart - Trạng thái phê duyệt
-const approvedStatus = excelExportRows.length
-  ? excelExportRows.reduce(
-      (acc, item) => {
-        if (item.status === 'Đã duyệt') acc.approved++;
-        else if (item.status === 'Từ chối') acc.refused++;
-        else acc.pending++;
-        return acc;
-      },
-      { approved: 0, pending: 0, refused: 0 }
-    )
-  : { approved: 10, pending: 3, refused: 1 }; // mock
-
+  // Thống kê trạng thái duyệt
+  const approvedStatus = documents.reduce(
+    (acc: any, item: any) => {
+      if (item.isApproved === 'approved') acc.approved++;
+      else if (item.isApproved === 'rejected') acc.refused++;
+      else acc.pending++;
+      return acc;
+    },
+    { approved: 0, pending: 0, refused: 0 }
+  );
   const pieStatusData = [
     { type: 'Đã duyệt', value: approvedStatus.approved },
     { type: 'Chờ duyệt', value: approvedStatus.pending },
@@ -56,31 +51,21 @@ const approvedStatus = excelExportRows.length
       type: 'inner' as const,
       offset: '-30%',
       content: '{value}',
-      style: { fontSize: 14, textAlign: 'center' ,radius: 0.9 },
+      style: { fontSize: 14, textAlign: 'center', radius: 0.9 },
     },
     legend: true,
-    color: ['#16AC66', '#F0C514', '#FF4D4F'], // Màu cho đã duyệt, chờ duyệt và từ chối
+    color: ['#16AC66', '#F0C514', '#FF4D4F'],
   };
 
+  // Top 5 lượt tải
+  const topDownloads = [...documents]
+    .filter((doc: any) => doc.isApproved === 'approved')
+    .sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0))
+    .slice(0, 5)
+    .map(doc => ({ name: doc.title, value: doc.downloadCount || 0 }));
 
-  const mockTopDownloads = [
-    { name: 'Giáo trình Toán cao cấp', value: 18 },
-    { name: 'Slide Vật lý đại cương', value: 14 },
-    { name: 'Bài tập Giải tích', value: 12 },
-    { name: 'Đề thi Kỹ thuật số', value: 10 },
-    { name: 'Bài giảng Hóa học', value: 9 },
-  ];
-
-
-
-  // 👇 Ưu tiên dữ liệu thật, nếu rỗng thì dùng mock
-  const usedCategoryStats = categoryStats.length ? categoryStats : mockCategoryStats;
-  const usedTopDownloads = chartTopDownload.length ? chartTopDownload : mockTopDownloads;
-
-
-  // Bar chart - Top download
   const barTopDownloadsConfig = {
-    data: usedTopDownloads.map(item => ({
+    data: topDownloads.map(item => ({
       name: item.name,
       downloads: item.value,
     })),
@@ -91,8 +76,17 @@ const approvedStatus = excelExportRows.length
     color: '#16AC66FF',
   };
 
-  // Grouped bar - Tài liệu & lượt tải theo danh mục
-  const categoryBarData = usedCategoryStats.flatMap(item => [
+  // Thống kê theo danh mục
+  const categoryStats = categories.map((cat: any) => {
+    const docsInCat = documents.filter((doc: any) => doc.categoryId === cat.categoryId && doc.isApproved === 'approved');
+    return {
+      categoryName: cat.categoryName,
+      totalDocuments: docsInCat.length,
+      totalDownloads: docsInCat.reduce((sum: number, doc: any) => sum + (doc.downloadCount || 0), 0),
+    };
+  });
+
+  const categoryBarData = categoryStats.flatMap((item: any) => [
     { category: item.categoryName, type: 'Số tài liệu', value: item.totalDocuments },
     { category: item.categoryName, type: 'Lượt tải', value: item.totalDownloads || 0 },
   ]);
@@ -109,7 +103,7 @@ const approvedStatus = excelExportRows.length
   };
 
   const exportCategoryStatsToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(excelExportRows.length ? excelExportRows : usedCategoryStats);
+    const ws = XLSX.utils.json_to_sheet(categoryStats);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'BaoCao');
     XLSX.writeFile(wb, 'BaoCaoHocLieu.xlsx');
@@ -121,16 +115,15 @@ const approvedStatus = excelExportRows.length
         <Col span={8}>
           <Card>
             <Text strong>Tổng số tài liệu</Text>
-            <Title level={2}>{usedCategoryStats.reduce((sum, c) => sum + c.totalDocuments, 0)}</Title>
+            <Title level={2}>{totalDocuments}</Title>
           </Card>
         </Col>
         <Col span={8}>
-        <Card>
-          <Text strong>Trạng thái phê duyệt</Text>
-          <Pie {...pieConfig} height={180} />
-        </Card>
-      </Col>
-
+          <Card>
+            <Text strong>Trạng thái phê duyệt</Text>
+            <Pie {...pieConfig} height={180} />
+          </Card>
+        </Col>
         <Col span={8}>
           <Card>
             <Text strong>Top 5 lượt tải</Text>

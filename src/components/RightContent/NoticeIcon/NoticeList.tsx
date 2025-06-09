@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import moment from 'moment';
 import React from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { useModel } from 'umi';
+import useAdminNotification from '@/models/adminNotification';
 import styles from './NoticeList.less';
 
 export type NoticeIconTabProps = {
@@ -33,9 +33,9 @@ const NoticeList: React.FC<NoticeIconTabProps> = ({
 	clearText,
 	viewMoreText,
 	showViewMore = false,
+	count,
 }) => {
-	const { total, readNotificationModel } = useModel('thongbao.noticeicon');
-
+	const { markOneAsRead } = useAdminNotification();
 	if (!list || list.length === 0) {
 		return (
 			<div className={styles.notFound}>
@@ -46,7 +46,7 @@ const NoticeList: React.FC<NoticeIconTabProps> = ({
 	}
 
 	const onItemClick = (item: ThongBao.IRecord) => {
-		if (!item.read) readNotificationModel('ONE', item?._id);
+		if (!item.read) markOneAsRead(item._id);
 		onClick?.(item);
 	};
 
@@ -69,7 +69,7 @@ const NoticeList: React.FC<NoticeIconTabProps> = ({
 					style={{ overflow: 'unset' }}
 					dataLength={list.length}
 					next={() => onViewMore?.()}
-					hasMore={list.length < total}
+					hasMore={list.length < (count || 0)}
 					loader={
 						<div style={{ padding: '12px 24px' }}>
 							<Skeleton paragraph={{ rows: 1 }} active />

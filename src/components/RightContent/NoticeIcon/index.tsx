@@ -3,6 +3,7 @@
 	import { useEffect, useState } from 'react';
 	import { useModel } from 'umi';
 	import NoticeIcon from './NoticeIcon';
+	import useAdminNotification from '@/models/adminNotification';
 
 	const NoticeIconView = () => {
 		const {
@@ -18,6 +19,7 @@
 			unread,
 			readNotificationModel,
 		} = useModel('thongbao.noticeicon');
+		const { notifications, markAllAsRead } = useAdminNotification();
 		const [visibleDetail, setVisibleDetail] = useState<boolean>(false);
 		const [visiblePopup, setVisiblePopup] = useState<boolean>(false);
 
@@ -40,7 +42,7 @@
 						setVisiblePopup(false);
 					}}
 					loading={loading}
-					onClear={() => clearReadState()}
+					onClear={markAllAsRead}
 					clearText='Đánh dấu tất cả là đã đọc'
 					viewMoreText='Tải thêm'
 					onViewMore={() => {
@@ -56,11 +58,11 @@
 					<NoticeIcon.Tab
 						tabKey='notification'
 						count={total}
-						list={danhSach}
+						list={notifications}
 						title='Thông báo'
 						emptyText='Bạn đã xem tất cả thông báo'
 						showClear={!!unread}
-						showViewMore={danhSach.length < total}
+						showViewMore={false}
 					/>
 				</NoticeIcon>
 

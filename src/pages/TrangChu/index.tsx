@@ -4,50 +4,64 @@ import {Card,Col,Row,Typography,Button,Table,Divider,} from 'antd';
 import {FileTextOutlined,BarChartOutlined,DownloadOutlined,} from '@ant-design/icons';
 import { Bar } from '@ant-design/plots';
 
-import { useModel } from 'umi';
-
 const { Title, Text } = Typography;
 
 const DocumentDashboard: React.FC = () => {
   const history = useHistory();
-  const {categoryStats = [],fileTypeStats = [],excelExportRows = [],chartTopDownload = [],} = useModel('documentReportState');
 
-  const mockTopDownloads = [
-    { name: 'Giáo trình Toán cao cấp', value: 18 },
-    { name: 'Slide Vật lý đại cương', value: 14 },
-    { name: 'Bài tập Giải tích', value: 12 },
-    { name: 'Đề thi Kỹ thuật số', value: 10 },
-    { name: 'Bài giảng Hóa học', value: 9 },
-  ];
+  // Lấy dữ liệu từ localStorage
+  const documents = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('data') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
+  const categories = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('categories') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
 
-  const approvedStatus = excelExportRows.length
-    ? excelExportRows.reduce(
-        (acc, item) => {
-          if (item.status === 'Đã duyệt') acc.approved++;
-          else if (item.status === 'Từ chối') acc.refused++;
-          else acc.pending++;
-          return acc;
-        },
-        { approved: 0, pending: 0, refused: 0 }
-      )
-    : { approved: 10, pending: 3, refused: 1 }; // mock
+  // Tổng số tài liệu đã duyệt
+  const totalDocuments = documents.filter((doc: any) => doc.isApproved === 'approved').length;
+  // Tổng số danh mục
+  const totalCategories = categories.length;
 
+  // Thống kê trạng thái duyệt
+  const approvedStatus = documents.reduce(
+    (acc: any, item: any) => {
+      if (item.isApproved === 'approved') acc.approved++;
+      else if (item.isApproved === 'rejected') acc.refused++;
+      else acc.pending++;
+      return acc;
+    },
+    { approved: 0, pending: 0, refused: 0 }
+  );
   const pieStatusData = [
     { type: 'Đã duyệt', value: approvedStatus.approved },
     { type: 'Chờ duyệt', value: approvedStatus.pending },
     { type: 'Từ chối', value: approvedStatus.refused },
   ];
 
-  const mockCategoryStats = [
-    { categoryName: 'Giáo trình', totalDocuments: 12, totalDownloads: 45 },
-    { categoryName: 'Bài giảng', totalDocuments: 8, totalDownloads: 27 },
-    { categoryName: 'Đề thi', totalDocuments: 5, totalDownloads: 19 },
-  ];
+  // Top 5 lượt tải
+  const topDownloads = [...documents]
+    .filter((doc: any) => doc.isApproved === 'approved')
+    .sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0))
+    .slice(0, 5)
+    .map(doc => ({ name: doc.title, value: doc.downloadCount || 0 }));
 
-  const usedTopDownloads = chartTopDownload.length ? chartTopDownload : mockTopDownloads;
-  const usedCategoryStats = categoryStats.length ? categoryStats : mockCategoryStats;
-
-  const totalDocuments = usedCategoryStats.reduce((sum, item) => sum + item.totalDocuments, 0);
+  // Thống kê theo danh mục
+  const categoryStats = categories.map((cat: any) => {
+    const docsInCat = documents.filter((doc: any) => doc.categoryId === cat.categoryId && doc.isApproved === 'approved');
+    return {
+      categoryName: cat.categoryName,
+      totalDocuments: docsInCat.length,
+      totalDownloads: docsInCat.reduce((sum: any, doc: any) => sum + (doc.downloadCount || 0), 0),
+    };
+  });
 
   const statusColumns = [
     { title: 'Trạng thái', dataIndex: 'type', key: 'type' },
@@ -59,7 +73,7 @@ const DocumentDashboard: React.FC = () => {
     { title: 'Lượt tải', dataIndex: 'value', key: 'value' },
   ];
 
-  const chartData = usedCategoryStats.map(item => ({
+  const chartData = categoryStats.map((item: any) => ({
     category: item.categoryName,
     value: item.totalDocuments,
     type: 'Số tài liệu',
@@ -83,7 +97,7 @@ const DocumentDashboard: React.FC = () => {
           <Card title="Tổng số tài liệu" bordered>
             <Text strong style={{ fontSize: 28, color: '#1890ff' }}>{totalDocuments}</Text>
             <Divider />
-            <Text type="secondary">Tổng hợp toàn bộ tài liệu đã đăng</Text>
+            <Text type="secondary">Tổng hợp toàn bộ tài liệu đã duyệt</Text>
           </Card>
         </Col>
 
@@ -102,7 +116,7 @@ const DocumentDashboard: React.FC = () => {
         <Col span={8}>
           <Card title="Top 5 lượt tải">
             <Table
-              dataSource={usedTopDownloads}
+              dataSource={topDownloads}
               columns={topDownloadColumns}
               pagination={false}
               size="small"
@@ -126,6 +140,7 @@ const DocumentDashboard: React.FC = () => {
               block
               type="primary"
               className="mb-2"
+              onClick={() => history.push('/documentmanaget/upload')}
             >
               Xem danh sách tài liệu
             </Button>
