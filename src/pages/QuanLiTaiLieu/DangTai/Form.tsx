@@ -1,149 +1,106 @@
-import { Button, DatePicker, Form, Input, Select, Upload, message } from 'antd';
+import { Form, Input, Button, DatePicker, Select, Upload, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useModel } from 'umi';
 import dayjs from 'dayjs';
 import { UploadOutlined } from '@ant-design/icons';
-import { notifyAllUsers } from '@/utils/notification';
+import axios from 'axios';
 
 const { Option } = Select;
 
 const FormDoc = () => {
   const [form] = Form.useForm();
-  const { data, setData, row, isEdit, setVisible, getDoc } = useModel('documentManager');
-  const { categories, getCategories, setCategories } = useModel('documentCategoryModel');
+  const { row, isEdit, setVisible, setData } = useModel('documentManager');
+  const { categories, setCategories } = useModel('documentCategoryModel');
   const [fileList, setFileList] = useState<any[]>([]);
-
   const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
 
+  // Gọi API nếu chưa có categories
+  useEffect(() => {
+    if (categories.length === 0) {
+      axios.get('http://localhost:3000/api/categories')
+        .then(res => {
+          setCategories(res.data || []);
+        })
+        .catch(() => {
+          message.error('Không thể tải danh mục từ API');
+        });
+    }
+  }, []);
+
+  // Cập nhật form nếu là edit
   useEffect(() => {
     if (isEdit && row) {
       form.setFieldsValue({
         ...row,
         uploadDate: dayjs(row.uploadDate),
-        categoryId: row.categoryId,
+        fileUpload: [{ name: row.title }],
       });
       if (row.fileUrl) {
-        setFileList([
-          {
-            uid: '-1',
-            name: row.title,
-            status: 'done',
-            url: row.fileUrl,
-          },
-        ]);
+        setFileList([{
+          uid: '-1',
+          name: row.title,
+          status: 'done',
+          url: row.fileUrl,
+        }]);
       }
     } else {
       form.resetFields();
+      form.setFieldsValue({
+        uploaderName: user.username || 'admin',
+        uploadDate: dayjs(),
+      });
       setFileList([]);
-      form.setFieldsValue({ uploaderName: user.username || 'ADMIN' });
     }
   }, [row, isEdit]);
 
-  const onUploadChange = ({ fileList: newFileList }: any) => {
-    setFileList(newFileList);
-  };
-
-  const saveData = (values: any, fileUrl: string) => {
-    const dataLocal: Document.Record[] = JSON.parse(localStorage.getItem('data') || '[]');
-    const category = categories.find(cat => cat.categoryId === values.categoryId);
-
-    const isAdmin = user.username === 'admin';
-
-    if (isEdit) {
-      const updated = dataLocal.map((item) =>
-        item.id === row?.id
-          ? {
-              ...item,
-              ...values,
-              uploadDate: values.uploadDate.format('YYYY-MM-DD'),
-              fileUrl,
-              categoryName: category?.categoryName || '',
-              fileType: values.fileType || 'other',
-              isApproved: isAdmin ? 'approved' : item.isApproved,
-            }
-          : item,
-      );
-      localStorage.setItem('data', JSON.stringify(updated));
-      message.success('Cập nhật tài liệu thành công!');
-    } else {
-      const newItem: Document.Record = {
-        id: Date.now().toString(),
-        ...values,
-        uploaderName: user.username || 'admin',
-        uploadDate: values.uploadDate.format('YYYY-MM-DD'),
-        fileUrl,
-        downloadCount: 0,
-        isApproved: isAdmin ? 'approved' : 'pending',
-        categoryName: category?.categoryName || '',
-        fileType: values.fileType || 'other',
-      };
-      localStorage.setItem('data', JSON.stringify([newItem, ...dataLocal]));
-      message.success('Thêm tài liệu thành công!');
-      if (isAdmin) {
-        notifyAllUsers({
-          type: 'admin_upload',
-          title: 'Tài liệu mới từ admin',
-          content: `Admin vừa đăng tài liệu "${values.title}".`
-        });
-      }
-    }
-
-    getDoc();
-    setVisible(false);
-  };
-
-  const onFinish = (values: any) => {
-    if (!fileList.length) {
-      message.error('Vui lòng tải lên file tài liệu');
-      return;
-    }
-
-    let fileUrl = '';
-    if (fileList[0].url) {
-      fileUrl = fileList[0].url;
-    } else if (fileList[0].originFileObj) {
+  const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.readAsDataURL(fileList[0].originFileObj);
-      reader.onload = () => {
-        fileUrl = reader.result as string;
-        saveData(values, fileUrl);
-      };
-      return;
-    }
-
-    saveData(values, fileUrl);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
-  const onCategoryChange = (value: string) => {
-    if (value === 'addNew') {
-      const newCatName = prompt('Nhập tên danh mục mới:');
-      if (newCatName) {
-        const newCat = {
-          categoryId: Date.now().toString(),
-          categoryName: newCatName,
-          description: '',
-          documentCount: 0,
-        };
-        const updatedCategories = [...categories, newCat];
-        setCategories(updatedCategories);
-        localStorage.setItem('categories', JSON.stringify(updatedCategories));
-        form.setFieldsValue({ categoryId: newCat.categoryId });
-      } else {
-        form.setFieldsValue({ categoryId: undefined });
-      }
+  const onFinish = async (values: any) => {
+    const file = fileList[0];
+    if (!file) {
+      return message.error('Vui lòng chọn file.');
     }
+
+    let fileUrl = file.url || '';
+    if (!fileUrl && file.originFileObj) {
+      fileUrl = await readFileAsBase64(file.originFileObj);
+    }
+
+    const newDoc: Document.Record = {
+      id: isEdit && row?.id ? row.id : Date.now().toString(),
+      title: values.title,
+      description: values.description,
+      categoryId: values.categoryId,
+      categoryName: categories.find(cat => cat.categoryId === values.categoryId)?.categoryName || '',
+      uploadDate: values.uploadDate.format('YYYY-MM-DD'),
+      uploaderId: user.id,
+      uploaderName: user.username,
+      fileUrl,
+      isApproved: user.username === 'admin' ? 'approved' : 'pending',
+      downloadCount: isEdit ? (row?.downloadCount ?? 0) : 0,
+    };
+
+    await setData(newDoc, isEdit);
+    setVisible(false);
   };
 
   return (
     <Form layout="vertical" form={form} onFinish={onFinish}>
-      <Form.Item name="title" label="Tên Tài Liệu" rules={[{ required: true }]}>
+      <Form.Item name="title" label="Tên tài liệu" rules={[{ required: true }]}>
         <Input />
       </Form.Item>
-      <Form.Item name="description" label="Mô Tả" rules={[{ required: true }]}>
+      <Form.Item name="description" label="Mô tả" rules={[{ required: true }]}>
         <Input.TextArea rows={3} />
       </Form.Item>
-      <Form.Item name="categoryId" label="Danh Mục" rules={[{ required: true }]}>
-        <Select onChange={onCategoryChange}>
+      <Form.Item name="categoryId" label="Danh mục" rules={[{ required: true }]}>
+        <Select placeholder="Chọn danh mục">
           {categories.map((cat) => (
             <Option key={cat.categoryId} value={cat.categoryId}>
               {cat.categoryName}
@@ -151,23 +108,30 @@ const FormDoc = () => {
           ))}
         </Select>
       </Form.Item>
-      <Form.Item name="uploadDate" label="Ngày Đăng" rules={[{ required: true }]}>
-        <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+      <Form.Item name="uploadDate" label="Ngày đăng" rules={[{ required: true }]}>
+        <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
       </Form.Item>
-      <Form.Item name="fileUpload" label="Tải Lên File" rules={[{ required: true }]}>
+      <Form.Item
+        name="fileUpload"
+        label="Tải lên file"
+        rules={[{ required: true, message: 'Vui lòng chọn file.' }]}
+      >
         <Upload
           beforeUpload={() => false}
-          onChange={onUploadChange}
+          onChange={({ fileList: newFileList }) => {
+            setFileList(newFileList);
+            form.setFieldsValue({ fileUpload: newFileList });
+          }}
           fileList={fileList}
-          accept=".pdf,.docx,.pptx,.xlsx"
           maxCount={1}
+          accept=".pdf,.docx,.xlsx,.pptx"
         >
-          <Button icon={<UploadOutlined />}>Chọn File</Button>
+          <Button icon={<UploadOutlined />}>Chọn file</Button>
         </Upload>
       </Form.Item>
       <Form.Item>
         <Button type="primary" htmlType="submit" block>
-          {isEdit ? 'Cập nhật' : 'Thêm'}
+          {isEdit ? 'Cập nhật' : 'Thêm mới'}
         </Button>
       </Form.Item>
     </Form>

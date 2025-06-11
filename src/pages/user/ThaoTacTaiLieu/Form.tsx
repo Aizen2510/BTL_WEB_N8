@@ -4,16 +4,30 @@ import { useModel } from 'umi';
 import dayjs from 'dayjs';
 import { UploadOutlined } from '@ant-design/icons';
 import { notifyAdmin } from '@/utils/notification';
+import axios from 'axios';
 
 const { Option } = Select;
 
 const FormDocUser = () => {
   const [form] = Form.useForm();
   const { data, setData, row, isEdit, setVisible, getDoc } = useModel('documentManager');
-  const { categories, getCategories, setCategories } = useModel('documentCategoryModel');
+  const { categories, setCategories } = useModel('documentCategoryModel');
   const [fileList, setFileList] = useState<any[]>([]);
 
   const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/api/categories');
+        setCategories(response.data);
+      } catch (error) {
+        console.error('Lỗi khi lấy danh mục:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     if (isEdit && row) {
@@ -40,12 +54,15 @@ const FormDocUser = () => {
   }, [row, isEdit]);
 
   const onUploadChange = ({ fileList: newFileList }: any) => {
+    console.log('Upload changed:', newFileList);
     setFileList(newFileList);
   };
 
   const saveData = (values: any, fileUrl: string) => {
     const dataLocal: Document.Record[] = JSON.parse(localStorage.getItem('data') || '[]');
     const category = categories.find(cat => cat.categoryId === values.categoryId);
+
+    const isAdmin = user.username?.toLowerCase() === 'admin';
 
     if (isEdit) {
       const updated = dataLocal.map((item) =>
@@ -66,11 +83,12 @@ const FormDocUser = () => {
       const newItem: Document.Record = {
         id: Date.now().toString(),
         ...values,
+        uploaderId: user.username || 'ADMIN',
         uploaderName: user.username || 'ADMIN',
         uploadDate: values.uploadDate.format('YYYY-MM-DD'),
         fileUrl,
         downloadCount: 0,
-        isApproved: user.username === 'ADMIN' ? 'approved' : 'pending',
+        isApproved: isAdmin ? 'approved' : 'pending',
         categoryName: category?.categoryName || '',
         fileType: values.fileType || 'other',
       };
@@ -81,17 +99,19 @@ const FormDocUser = () => {
     getDoc();
     setVisible(false);
 
-    // Gửi thông báo cho admin nếu là user
-    if (user.username !== 'admin') {
+    if (!isAdmin) {
       notifyAdmin({
         type: 'upload_doc',
         title: 'Tài liệu mới chờ duyệt',
-        content: `Người dùng ${user.username} vừa đăng tài liệu "${values.title}".`
+        content: `Người dùng ${user.username} vừa đăng tài liệu "${values.title}".`,
       });
     }
   };
 
   const onFinish = (values: any) => {
+    console.log('Submitting form:', values);
+    console.log('Current fileList:', fileList);
+
     if (!fileList.length) {
       message.error('Vui lòng tải lên file tài liệu');
       return;
@@ -138,10 +158,12 @@ const FormDocUser = () => {
       <Form.Item name="title" label="Tên Tài Liệu" rules={[{ required: true }]}>
         <Input />
       </Form.Item>
+
       <Form.Item name="description" label="Mô Tả" rules={[{ required: true }]}>
         <Input.TextArea rows={3} />
       </Form.Item>
-      <Form.Item name="categoryId" label="Danh Mục" rules={[{ required: true }]}>
+
+      <Form.Item name="categoryId" label="Danh mục" rules={[{ required: true }]}>
         <Select onChange={onCategoryChange}>
           {categories.map((cat) => (
             <Option key={cat.categoryId} value={cat.categoryId}>
@@ -150,10 +172,12 @@ const FormDocUser = () => {
           ))}
         </Select>
       </Form.Item>
+
       <Form.Item name="uploadDate" label="Ngày Đăng" rules={[{ required: true }]}>
         <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
       </Form.Item>
-      <Form.Item name="fileUpload" label="Tải Lên File" rules={[{ required: true }]}>
+
+      <Form.Item label="Tải Lên File">
         <Upload
           beforeUpload={() => false}
           onChange={onUploadChange}
@@ -164,6 +188,7 @@ const FormDocUser = () => {
           <Button icon={<UploadOutlined />}>Chọn File</Button>
         </Upload>
       </Form.Item>
+
       <Form.Item>
         <Button type="primary" htmlType="submit" block>
           {isEdit ? 'Cập nhật' : 'Thêm'}

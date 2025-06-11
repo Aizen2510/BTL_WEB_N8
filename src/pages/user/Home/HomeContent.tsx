@@ -50,58 +50,78 @@ const HomeContent: React.FC<HomeContentProps> = ({
   const [totalDownloadCount, setTotalDownloadCount] = useState<number>(0);
 
   useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const [topDocsRes, totalDocsRes, totalDownloadsRes] = await Promise.all([
-        axios.get('http://localhost:3000/api/statistics/top-documents', { params: { limit: 6 } }),
-        axios.get('http://localhost:3000/api/statistics/total-documents'),
-        axios.get('http://localhost:3000/api/statistics/total-downloads'),
-      ]);
-
-      const topDocs = Array.isArray(topDocsRes.data) ? topDocsRes.data : [];
-      const totalDocs = totalDocsRes.data?.total ?? 0;
-      const totalDownloads = totalDownloadsRes.data?.total ?? 0;
-
-      setTopDownloadedDocs(topDocs);
-      setTotalDocCount(totalDocs);
-      setTotalDownloadCount(totalDownloads);
-    } catch (error) {
-      console.error('Lỗi khi fetch dữ liệu thống kê:', error);
-      setTopDownloadedDocs([]);
-      setTotalDocCount(0);
-      setTotalDownloadCount(0);
-    }
-  };
-
-  fetchData();
-}, []);
-  const documentstotal = React.useMemo(() => {
+    const fetchData = async () => {
       try {
-        return JSON.parse(localStorage.getItem('data') || '[]');
-      } catch {
-        return [];
-      }
-    }, []);
-  const totalDocuments = documentstotal.filter((doc: any) => doc.isApproved === 'approved').length;
-  const topCategoryDownloaded = Array.isArray(categoryData)
-    ? [...categoryData].sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 5)
-    : [];
+        // Lấy token từ localStorage hoặc context
+        const token = localStorage.getItem('token'); // Hoặc từ context/state management
+        
+        const config = {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        };
 
-  const [totalApprovedDocs, setTotalApprovedDocs] = useState<number>(0);
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        const res = await axios.get('http://localhost:3000/api/statistics/total-documents'); // ⚠️ Sửa lại URL theo API thực tế của bạn
-        const allDocs = res.data || [];
-        const approvedDocs = allDocs.filter((doc: any) => doc.isApproved === 'approved');
-        setTotalApprovedDocs(approvedDocs.length);
+        console.log('Fetching statistics data...');
+        
+        const [topDocsRes, totalDocsRes, totalDownloadsRes] = await Promise.all([
+          axios.get('http://localhost:3000/api/statistics/top-documents', config),
+          axios.get('http://localhost:3000/api/statistics/total-documents', config),
+          axios.get('http://localhost:3000/api/statistics/total-downloads', config),
+        ]);
+
+        console.log('API Responses:', {
+          topDocs: topDocsRes.data,
+          totalDocs: totalDocsRes.data,
+          totalDownloads: totalDownloadsRes.data
+        });
+
+        // ✅ Sửa lỗi: API trả về { totalDocuments: number }, không phải { total: number }
+        const topDocs = Array.isArray(topDocsRes.data) ? topDocsRes.data : [];
+        const totalDocs = totalDocsRes.data?.totalDocuments ?? 0; // ✅ Đổi từ 'total' thành 'totalDocuments'
+        const totalDownloads = totalDownloadsRes.data?.totalDownloads ?? 0; // ✅ Đổi từ 'total' thành 'totalDownloads'
+
+        console.log('Processed data:', {
+          topDocs,
+          totalDocs,
+          totalDownloads
+        });
+
+        setTopDownloadedDocs(topDocs);
+        setTotalDocCount(totalDocs);
+        setTotalDownloadCount(totalDownloads);
       } catch (error) {
-        console.error('Failed to fetch documents:', error);
+        console.error('Lỗi khi fetch dữ liệu thống kê:', error);
+        
+        // Log chi tiết lỗi
+        if (error.response) {
+          console.error('Response error:', error.response.status, error.response.data);
+        } else if (error.request) {
+          console.error('Request error:', error.request);
+        } else {
+          console.error('Error message:', error.message);
+        }
+        
+        setTopDownloadedDocs([]);
+        setTotalDocCount(0);
+        setTotalDownloadCount(0);
       }
     };
 
-    fetchDocuments();
+    fetchData();
   }, []);
+
+  const documentstotal = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('data') || '[]');
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const topCategoryDownloaded = Array.isArray(categoryData)
+    ? [...categoryData].sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 5)
+    : [];
 
   return (
     <>
@@ -159,21 +179,32 @@ const HomeContent: React.FC<HomeContentProps> = ({
           <Row gutter={16} className={styles.statsRow}>
             <Col span={6}>
               <Card bordered={false}>
-                <Statistic title="Tổng số tài liệu" value={totalApprovedDocs} prefix={<FileTextOutlined />} />
+                <Statistic 
+                  title="Tổng số tài liệu" 
+                  value={totalDocCount} 
+                  prefix={<FileTextOutlined />} 
+                />
               </Card>
             </Col>
             <Col span={6}>
               <Card bordered={false}>
-                <Statistic title="Tổng Số Danh mục" value={stats.totalCategories} prefix={<BookOutlined />} />
+                <Statistic 
+                  title="Tổng Số Danh mục" 
+                  value={stats.totalCategories} 
+                  prefix={<BookOutlined />} 
+                />
               </Card>
             </Col>
             <Col span={6}>
               <Card bordered={false}>
-                <Statistic title="Lượt tải xuống" value={totalDownloadCount} prefix={<DownloadOutlined />} />
+                <Statistic 
+                  title="Lượt tải xuống" 
+                  value={totalDownloadCount} 
+                  prefix={<DownloadOutlined />} 
+                />
               </Card>
             </Col>
           </Row>
-
         </div>
 
         <Row gutter={16}>

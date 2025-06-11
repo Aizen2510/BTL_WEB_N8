@@ -1,49 +1,82 @@
-import React from 'react';
-import { Row, Col, Card, Typography, Button } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Row, Col, Card, Typography, Button, message } from 'antd';
 import { Pie, Bar } from '@ant-design/plots';
 import { DownloadOutlined } from '@ant-design/icons';
+import axios from 'axios';
 import * as XLSX from 'xlsx';
 
 const { Title, Text } = Typography;
 
 const DashboardOverview: React.FC = () => {
-  // Lấy dữ liệu từ localStorage
-  const documents = React.useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('data') || '[]');
-    } catch {
-      return [];
-    }
-  }, []);
-  const categories = React.useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('categories') || '[]');
-    } catch {
-      return [];
-    }
-  }, []);
+  const [totalDocuments, setTotalDocuments] = useState<number>(0);
+  const [approvalStats, setApprovalStats] = useState<any[]>([]);
+  const [topDownloads, setTopDownloads] = useState<any[]>([]);
+  const [categoryStats, setCategoryStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Tổng số tài liệu đã duyệt
-  const totalDocuments = documents.filter((doc: any) => doc.isApproved === 'approved').length;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          message.error('Không tìm thấy token xác thực');
+          return;
+        }
 
-  // Thống kê trạng thái duyệt
-  const approvedStatus = documents.reduce(
-    (acc: any, item: any) => {
-      if (item.isApproved === 'approved') acc.approved++;
-      else if (item.isApproved === 'rejected') acc.refused++;
-      else acc.pending++;
-      return acc;
-    },
-    { approved: 0, pending: 0, refused: 0 }
-  );
-  const pieStatusData = [
-    { type: 'Đã duyệt', value: approvedStatus.approved },
-    { type: 'Chờ duyệt', value: approvedStatus.pending },
-    { type: 'Từ chối', value: approvedStatus.refused },
-  ];
+        const headers = {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        };
+
+        const [
+          totalRes,
+          approvalRes,
+          topDownloadsRes,
+          categoryRes,
+        ] = await Promise.all([
+          axios.get('http://localhost:3000/api/statistics/total-documents', { headers }),
+          axios.get('http://localhost:3000/api/statistics/document-approval-stats', { headers }),
+          axios.get('http://localhost:3000/api/statistics/top-documents-with-status', { headers }),
+          axios.get('http://localhost:3000/api/statistics/category', { headers }),
+        ]);
+
+        setTotalDocuments(totalRes.data.totalDocuments || 0);
+
+        const approvalData = approvalRes.data || [];
+        const formattedApprovalStats = [
+          { type: 'Đã duyệt', value: approvalData.find((i: any) => i.status === 'approved')?.count || 0 },
+          { type: 'Chờ duyệt', value: approvalData.find((i: any) => i.status === 'pending')?.count || 0 },
+          { type: 'Từ chối', value: approvalData.find((i: any) => i.status === 'rejected')?.count || 0 },
+        ];
+        setApprovalStats(formattedApprovalStats);
+
+        const formattedTopDownloads = (topDownloadsRes.data || []).slice(0, 5).map((doc: any) => ({
+          name: doc.title || 'Không tên',
+          value: doc.downloadCount || 0,
+        }));
+        setTopDownloads(formattedTopDownloads);
+
+        const formattedCategoryStats = (categoryRes.data || []).map((item: any) => ({
+          category: item.category || item.categoryName || 'Không rõ',
+          type: item.type || 'Tài liệu',
+          value: item.count || item.value || 0,
+        }));
+        setCategoryStats(formattedCategoryStats);
+
+      } catch (error) {
+        console.error('Lỗi khi tải dữ liệu thống kê:', error);
+        message.error('Không thể tải dữ liệu thống kê');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const pieConfig = {
-    data: pieStatusData,
+    data: approvalStats,
     angleField: 'value',
     colorField: 'type',
     radius: 0.9,
@@ -51,18 +84,11 @@ const DashboardOverview: React.FC = () => {
       type: 'inner' as const,
       offset: '-30%',
       content: '{value}',
-      style: { fontSize: 14, textAlign: 'center', radius: 0.9 },
+      style: { fontSize: 14, textAlign: 'center' },
     },
     legend: true,
     color: ['#16AC66', '#F0C514', '#FF4D4F'],
   };
-
-  // Top 5 lượt tải
-  const topDownloads = [...documents]
-    .filter((doc: any) => doc.isApproved === 'approved')
-    .sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0))
-    .slice(0, 5)
-    .map(doc => ({ name: doc.title, value: doc.downloadCount || 0 }));
 
   const barTopDownloadsConfig = {
     data: topDownloads.map(item => ({
@@ -76,19 +102,21 @@ const DashboardOverview: React.FC = () => {
     color: '#16AC66FF',
   };
 
-  // Thống kê theo danh mục
-  const categoryStats = categories.map((cat: any) => {
-    const docsInCat = documents.filter((doc: any) => doc.categoryId === cat.categoryId && doc.isApproved === 'approved');
-    return {
-      categoryName: cat.categoryName,
-      totalDocuments: docsInCat.length,
-      totalDownloads: docsInCat.reduce((sum: number, doc: any) => sum + (doc.downloadCount || 0), 0),
-    };
+  const categoryStatMap: any = {};
+
+  categoryStats.forEach(item => {
+    const name = item.category;
+    if (!categoryStatMap[name]) {
+      categoryStatMap[name] = { totalDocuments: 0, totalDownloads: 0 };
+    }
+
+    if (item.type === 'Tài liệu') categoryStatMap[name].totalDocuments += item.value;
+    if (item.type === 'Lượt tải') categoryStatMap[name].totalDownloads += item.value;
   });
 
-  const categoryBarData = categoryStats.flatMap((item: any) => [
-    { category: item.categoryName, type: 'Số tài liệu', value: item.totalDocuments },
-    { category: item.categoryName, type: 'Lượt tải', value: item.totalDownloads || 0 },
+  const categoryBarData = Object.entries(categoryStatMap).flatMap(([category, stats]: any) => [
+    { category, type: 'Số tài liệu', value: stats.totalDocuments },
+    { category, type: 'Lượt tải', value: stats.totalDownloads },
   ]);
 
   const barCategoryGroupedConfig = {
@@ -103,7 +131,17 @@ const DashboardOverview: React.FC = () => {
   };
 
   const exportCategoryStatsToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(categoryStats);
+    const flatData = categoryBarData.reduce((acc: any[], item) => {
+      const existing = acc.find(x => x.category === item.category);
+      if (existing) {
+        existing[item.type] = item.value;
+      } else {
+        acc.push({ category: item.category, [item.type]: item.value });
+      }
+      return acc;
+    }, []);
+
+    const ws = XLSX.utils.json_to_sheet(flatData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'BaoCao');
     XLSX.writeFile(wb, 'BaoCaoHocLieu.xlsx');
@@ -113,19 +151,19 @@ const DashboardOverview: React.FC = () => {
     <div style={{ padding: 16 }}>
       <Row gutter={[16, 16]}>
         <Col span={8}>
-          <Card>
+          <Card loading={loading}>
             <Text strong>Tổng số tài liệu</Text>
             <Title level={2}>{totalDocuments}</Title>
           </Card>
         </Col>
         <Col span={8}>
-          <Card>
+          <Card loading={loading}>
             <Text strong>Trạng thái phê duyệt</Text>
             <Pie {...pieConfig} height={180} />
           </Card>
         </Col>
         <Col span={8}>
-          <Card>
+          <Card loading={loading}>
             <Text strong>Top 5 lượt tải</Text>
             <Bar {...barTopDownloadsConfig} height={180} />
           </Card>
@@ -138,6 +176,7 @@ const DashboardOverview: React.FC = () => {
                 Xuất báo cáo
               </Button>
             }
+            loading={loading}
           >
             <Bar {...barCategoryGroupedConfig} height={300} />
           </Card>

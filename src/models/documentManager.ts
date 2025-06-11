@@ -1,105 +1,62 @@
-// 📁 src/models/documentManager.ts
-import { useState, useEffect } from 'react';
-import { getDataDoc } from '@/services/DocumentManaget';
-import { useModel } from 'umi';
+import { useState } from 'react';
+import {
+  getAllDocuments,
 
-const safeGetLocalData = (key: string) => {
-	try {
-		const json = localStorage.getItem(key);
-		if (!json) return null;
-		const data = JSON.parse(json);
-		if (Array.isArray(data)) return data;
-		return null;
-	} catch (error) {
-		console.error('Lỗi parse JSON localStorage:', error);
-		return null;
-	}
-	};
+  updateDocument,
+  deleteDocument,
+  createAdminDocument,
+} from '@/services/documentService';
 
-	export default function useDocumentModel() {
-	const [data, setDataState] = useState<Document.Record[]>([]);
-	const [visible, setVisible] = useState(false);
-	const [isEdit, setIsEdit] = useState(false);
-	const [row, setRow] = useState<Document.Record | undefined>();
-	const [searchText, setSearchText] = useState('');
+export default () => {
+  const [data, setDataState] = useState<Document.Record[]>([]);
+  const [visible, setVisible] = useState(false);
+  const [row, setRow] = useState<Document.Record>();
+  const [isEdit, setIsEdit] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
-	const { categories } = useModel('documentCategoryModel');
+  const getDoc = async () => {
+    const res = await getAllDocuments();
+    setDataState(res.data);
+  };
 
-	const mapCategoryNameToDocs = (docs: Document.Record[], cats: category.Record[]) => {
-		return docs.map((doc) => {
-		const cat = cats.find((c) => c.categoryId === doc.categoryId);
-		return {
-			...doc,
-			categoryName: cat ? cat.categoryName : '',
-		};
-		});
-	};
+  const setData = async (doc: Document.Record, editMode: boolean) => {
+    if (editMode) {
+      const updatedResponse = await updateDocument(doc.id, doc);
+      const updated = updatedResponse.data || updatedResponse;
+      setDataState(prev => prev.map(item => (item.id === doc.id ? updated : item)));
+    } else {
+      // ✅ Sử dụng API dành cho admin
+      const createdResponse = await createAdminDocument(doc);
+      const created = createdResponse.data || createdResponse;
+      setDataState(prev => [...prev, created]);
+    }
+  };
 
-	const getDoc = async () => {
-		try {
-		const response = await getDataDoc();
-		if (response && Array.isArray(response.data)) {
-			const mappedData = mapCategoryNameToDocs(response.data, categories);
-			setDataState(mappedData);
-			localStorage.setItem('data', JSON.stringify(mappedData));
-			return;
-		}
-		throw new Error('Dữ liệu API không hợp lệ');
-		} catch (error) {
-		console.warn('Lỗi API, fallback sang localStorage:', error);
-		const dataLocal = safeGetLocalData('data') || [];
-		const mappedData = mapCategoryNameToDocs(dataLocal, categories);
-		setDataState(mappedData);
-		}
-	};
+  const removeDocument = async (id: string) => {
+    await deleteDocument(id);
+    setDataState(prev => prev.filter(item => item.id !== id));
+  };
 
-	const saveData = (newData: Document.Record[]) => {
-		const mappedData = mapCategoryNameToDocs(newData, categories);
-		setDataState(mappedData);
-		localStorage.setItem('data', JSON.stringify(mappedData));
-	};
+  const filteredData = data.filter((item) =>
+    [item.title, item.uploaderName, item.description]
+      .join(' ')
+      .toLowerCase()
+      .includes(searchText.toLowerCase())
+  );
 
-	useEffect(() => {
-		if (data.length > 0 && categories.length > 0) {
-		const updatedData = mapCategoryNameToDocs(data, categories);
-		setDataState(updatedData);
-		}
-	}, [categories]);
-
-
-	const filteredData = data.filter((item) =>
-		[item.title, item.uploaderName, item.description].some((field) =>
-		field?.toLowerCase().includes(searchText.toLowerCase())
-		)
-	);
-
-	const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-	const myDocuments = filteredData.filter(
-		(item) =>
-			item.uploaderId === currentUser.id ||
-			item.uploaderName === currentUser.username // tuỳ theo bạn lưu id hay username
-	);
-
-	const approvedDocuments = myDocuments.filter(doc => doc.isApproved === 'approved');
-
-	useEffect(() => {
-		getDoc();
-	}, []);
-
-	return {
-		data,
-		setData: saveData,
-		visible,
-		setVisible,
-		row,
-		setRow,
-		isEdit,
-		setIsEdit,
-		getDoc,
-		searchText,
-		setSearchText,
-		filteredData,
-		myDocuments,
-		approvedDocuments,
-	};
-}
+  return {
+    data,
+    setData,
+    visible,
+    setVisible,
+    row,
+    setRow,
+    isEdit,
+    setIsEdit,
+    getDoc,
+    removeDocument,
+    searchText,
+    setSearchText,
+    filteredData,
+  };
+};

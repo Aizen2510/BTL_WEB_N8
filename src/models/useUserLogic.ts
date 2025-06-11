@@ -1,117 +1,142 @@
-// src/hooks/useUserLogic.ts
-
 import { useState } from 'react';
-import { useHistory } from 'react-router-dom';
-import { message, Modal } from 'antd';
-import axios from 'axios';
-
+import { message } from 'antd';
 
 const API_URL = 'http://localhost:3000/api';
 
-// Cấu hình axios
-axios.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
+// Utility function để gọi API
+const apiCall = async (url, options = {}) => {
+    const token = localStorage.getItem('token');
+    const defaultHeaders = {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+
+    const config = {
+        headers: defaultHeaders,
+        ...options,
+    };
+
+    const response = await fetch(url, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || 'API call failed');
     }
-);
+
+    return data;
+};
 
 export const useUserLogic = () => {
-    const history = useHistory();
-    const [pendingUser, setPendingUser] = useState<any>(null);
-    const [resetEmail, setResetEmail] = useState<string>('');
+    const [loading, setLoading] = useState(false);
+    const [pendingUser, setPendingUser] = useState(null);
     const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
     const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+    const [isChangePasswordModalVisible, setIsChangePasswordModalVisible] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
     const [isResetPasswordModalVisible, setIsResetPasswordModalVisible] = useState(false);
     const [isForgotVerificationModalVisible, setIsForgotVerificationModalVisible] = useState(false);
 
-    const getUsers = async (): Promise<UserManagement.User[]> => {
+    // Đăng ký người dùng mới
+    const handleRegister = async (values) => {
         try {
-            const response = await axios.get(`${API_URL}/users`);
-            return response.data as UserManagement.User[];
-        } catch (error) {
-            message.error('Lỗi khi lấy danh sách người dùng');
-            return [];
-        }
-    };
-
-    const findUserByEmail = async (email: string): Promise<UserManagement.User| null> => {
-        try {
-            const response = await axios.get(`${API_URL}/users?email=${email}`);
-            return response.data?.[0] as UserManagement.User || null;
-        } catch (error) {
-            return null;
-        }
-    };
-
-    const handleRegister = async (values: { username: string; email: string; password: string; }) => {
-        try {
+            setLoading(true);
             const { username, email, password } = values;
 
-            // Kiểm tra email tồn tại
-            const existingUser = await findUserByEmail(email);
-            if (existingUser) {
-                Modal.error({ title: 'Email đã tồn tại' });
-                return;
-            }
-
-            // Gọi API đăng ký
-            const response = await axios.post(`${API_URL}/auth/register`, {
-                email,
-                password,
-                fullName: username
+            const response = await apiCall(`${API_URL}/auth/register`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    fullName: username
+                })
             });
 
-            setPendingUser({ ...values, id: response.data.userId });
+            // Lưu thông tin pending user để xác thực OTP
+            setPendingUser({ ...values, id: response.userId });
             setIsVerificationModalVisible(true);
-            message.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực.');
-        } catch (error: any) {
-            Modal.error({ title: error.response?.data?.message || 'Đăng ký thất bại' });
+            message.success(window.message || 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực.');
+        } catch (error) {
+            message.error(`Lỗi đăng ký: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleVerification = async ({ code }: { code: string }) => {
+    // Xác thực OTP
+    const handleVerification = async (values) => {
         try {
-            if (!pendingUser) return;
+            setLoading(true);
+            const { code } = values;
+            
+            if (!pendingUser) {
+                throw new Error('Không tìm thấy thông tin đăng ký');
+            }
 
-            // Gọi API xác thực OTP
-            await axios.post(`${API_URL}/auth/verify-otp`, {
-                userId: pendingUser.id,
-                otp: code
+            await apiCall(`${API_URL}/auth/verify-otp`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    userId: pendingUser.id,
+                    otp: code
+                })
             });
 
             setPendingUser(null);
             setIsVerificationModalVisible(false);
             setIsSuccessModalVisible(true);
             message.success('Xác thực thành công!');
-        } catch (error: any) {
-            Modal.error({ title: error.response?.data?.message || 'Xác thực thất bại' });
+        } catch (error) {
+            message.error(`Lỗi xác thực: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleLogin = async (values: { email: string; password: string; remember: boolean; }) => {
+    // Gửi lại OTP
+    const handleResendOTP = async () => {
         try {
-            const { email, password, remember } = values;
+            setLoading(true);
+            
+            if (!pendingUser) {
+                throw new Error('Không tìm thấy thông tin đăng ký');
+            }
 
-            // Gọi API đăng nhập
-            const response = await axios.post(`${API_URL}/auth/login`, {
-                email,
-                password
+            await apiCall(`${API_URL}/auth/resend-otp`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    userId: pendingUser.id
+                })
             });
 
-            const { token, user } = response.data as { token: string; user: UserManagement.User };
+            message.success('Đã gửi lại mã OTP');
+        } catch (error) {
+            message.error(`Lỗi gửi lại OTP: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            // Lưu thông tin đăng nhập
+    const handleLogin = async (values) => {
+        try {
+            setLoading(true);
+            const { email, password, remember } = values;
+
+            const response = await apiCall(`${API_URL}/auth/login`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            });
+
+            const { token, user } = response;
+
+            // Lưu thông tin vào localStorage
             localStorage.setItem('currentUser', JSON.stringify(user));
             localStorage.setItem('token', token);
             localStorage.setItem('role', user.role);
 
+            // Xử lý remember me
             if (remember) {
                 localStorage.setItem('savedEmail', email);
                 localStorage.setItem('savedPassword', password);
@@ -122,93 +147,251 @@ export const useUserLogic = () => {
                 localStorage.setItem('remember', 'false');
             }
 
-            message.success('Đăng nhập thành công!');
-            history.push(user.role === 'admin' ? '/admin' : '/user/home');
-        } catch (error: any) {
-            message.error(error.response?.data?.message || 'Đăng nhập thất bại');
-        }
-    };
-
-    const handleLogout = async () => {
-        try {
-            const currentUser: UserManagement.User| null = JSON.parse(localStorage.getItem('currentUser') || 'null');
-            if (currentUser?.id) {
-                await axios.put(`${API_URL}/users/${currentUser.id}`, { status: 'inactive' });
+            message.success(response.message || 'Đăng nhập thành công!');
+            
+            // Chuyển hướng dựa trên role
+            if (user.role === 'admin') {
+                window.location.href = '/admin';
+            } else {
+                window.location.href = '/user/home';
             }
         } catch (error) {
-            console.error('Lỗi khi cập nhật trạng thái người dùng:', error);
+            message.error(`Lỗi đăng nhập: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
-
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        message.success('Đã đăng xuất');
-        history.push('/login');
     };
 
-    const handleForgotPassword = async (email: string) => {
+    // Đăng xuất
+    const handleLogout = async () => {
         try {
-            // Gọi API quên mật khẩu
-            await axios.post(`${API_URL}/auth/forgot-password`, { email });
+            setLoading(true);
+            
+            // Gọi API logout nếu cần thiết
+            try {
+                await apiCall(`${API_URL}/auth/logout`, {
+                    method: 'POST'
+                });
+            } catch (error) {
+                console.error('Logout API error:', error);
+                // Tiếp tục đăng xuất local dù API lỗi
+            }
+            
+            // Xóa thông tin khỏi localStorage
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            
+            message.success('Đã đăng xuất thành công');
+            window.location.href = '/login';
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Vẫn đăng xuất local dù có lỗi
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = '/login';
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Đổi mật khẩu
+    const handleChangePassword = async (values) => {
+        try {
+            setLoading(true);
+            const { oldPassword, newPassword } = values;
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+            const response = await apiCall(`${API_URL}/auth/change-password`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    userId: currentUser.id,
+                    oldPassword,
+                    newPassword
+                })
+            });
+
+            message.success(response.message || 'Đổi mật khẩu thành công!');
+            setIsChangePasswordModalVisible(false);
+        } catch (error) {
+            message.error(`Lỗi đổi mật khẩu: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Lấy thông tin người dùng hiện tại
+    const getCurrentUser = () => {
+        try {
+            const userStr = localStorage.getItem('currentUser');
+            return userStr ? JSON.parse(userStr) : null;
+        } catch (error) {
+            console.error('Error parsing current user:', error);
+            return null;
+        }
+    };
+
+    // Kiểm tra trạng thái đăng nhập
+    const isAuthenticated = () => {
+        return !!localStorage.getItem('token');
+    };
+
+    // Kiểm tra role của user
+    const hasRole = (role) => {
+        const currentUser = getCurrentUser();
+        return currentUser?.role === role;
+    };
+
+    // Lấy thông tin đã lưu (remember me)
+    const getSavedCredentials = () => {
+        const remember = localStorage.getItem('remember') === 'true';
+        if (remember) {
+            return {
+                email: localStorage.getItem('savedEmail') || '',
+                password: localStorage.getItem('savedPassword') || '',
+                remember: true
+            };
+        }
+        return {
+            email: '',
+            password: '',
+            remember: false
+        };
+    };
+
+    // Refresh token (nếu cần)
+    const refreshToken = async () => {
+        try {
+            const response = await apiCall(`${API_URL}/auth/refresh`, {
+                method: 'POST'
+            });
+            
+            if (response.token) {
+                localStorage.setItem('token', response.token);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Token refresh failed:', error);
+            // Đăng xuất nếu refresh token thất bại
+            handleLogout();
+            return false;
+        }
+    };
+
+    // Quên mật khẩu
+    const handleForgotPassword = async (email) => {
+        try {
+            setLoading(true);
+            
+            await apiCall(`${API_URL}/auth/forgot-password`, {
+                method: 'POST',
+                body: JSON.stringify({ email })
+            });
 
             setResetEmail(email);
             setIsForgotVerificationModalVisible(true);
             message.success('Đã gửi email hướng dẫn đặt lại mật khẩu');
-        } catch (error: any) {
-            Modal.error({ title: error.response?.data?.message || 'Gửi email thất bại' });
+        } catch (error) {
+            message.error(`Lỗi gửi email: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleForgotVerification = async (code: string) => {
+    // Xác thực forgot password OTP
+    const handleForgotVerification = async (code) => {
         try {
-            // Gọi API xác thực OTP
-            await axios.post(`${API_URL}/auth/verify-otp`, {
-                userId: resetEmail,
-                otp: code
+            setLoading(true);
+            
+            await apiCall(`${API_URL}/auth/verify-otp`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: resetEmail,
+                    otp: code
+                })
             });
 
             setIsForgotVerificationModalVisible(false);
             setIsResetPasswordModalVisible(true);
-        } catch (error: any) {
-            Modal.error({ title: error.response?.data?.message || 'Xác thực thất bại' });
+        } catch (error) {
+            message.error(`Lỗi xác thực: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleResetPassword = async (newPassword: string) => {
+    // Reset password
+    const handleResetPassword = async (newPassword) => {
         try {
-            // Gọi API đặt lại mật khẩu
-            await axios.post(`${API_URL}/auth/reset-password`, {
-                email: resetEmail,
-                newPassword
+            setLoading(true);
+            
+            await apiCall(`${API_URL}/auth/reset-password`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: resetEmail,
+                    newPassword
+                })
             });
 
             setIsResetPasswordModalVisible(false);
             message.success('Đặt lại mật khẩu thành công!');
-            history.push('/login');
-        } catch (error: any) {
-            Modal.error({ title: error.response?.data?.message || 'Đặt lại mật khẩu thất bại' });
+            window.location.href = '/login';
+        } catch (error) {
+            message.error(`Lỗi đặt lại mật khẩu: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const getUsers = async () => {
+        try {
+            const response = await apiCall(`${API_URL}/users`);
+            return response;
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            return [];
         }
     };
 
     return {
+        // Methods
         handleRegister,
         handleLogin,
         handleLogout,
+        handleChangePassword,
         handleVerification,
+        handleResendOTP,
+        handleForgotPassword,
+        handleForgotVerification,
+        handleResetPassword,
+        getCurrentUser,
+        isAuthenticated,
+        hasRole,
+        getSavedCredentials,
+        refreshToken,
+        getUsers,
+        
+        // States
+        loading,
+        pendingUser,
         isVerificationModalVisible,
         setIsVerificationModalVisible,
         isSuccessModalVisible,
         setIsSuccessModalVisible,
-        handleSuccessModalOk: () => {
-            setIsSuccessModalVisible(false);
-            history.push('/login');
-        },
-        handleForgotPassword,
-        handleForgotVerification,
-        handleResetPassword,
-        isForgotVerificationModalVisible,
-        setIsForgotVerificationModalVisible,
+        isChangePasswordModalVisible,
+        setIsChangePasswordModalVisible,
+        resetEmail,
         isResetPasswordModalVisible,
         setIsResetPasswordModalVisible,
+        isForgotVerificationModalVisible,
+        setIsForgotVerificationModalVisible,
+        
+        // Modal handlers
+        handleSuccessModalOk: () => {
+            setIsSuccessModalVisible(false);
+            window.location.href = '/login';
+        }
     };
 };

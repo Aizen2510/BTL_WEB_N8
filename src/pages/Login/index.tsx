@@ -56,7 +56,7 @@ const Login = () => {
 						<Form.Item name="remember" valuePropName="checked" noStyle>
 							<Checkbox>Ghi nhớ mật khẩu</Checkbox>
 						</Form.Item>
-						<a href="./LogoutPage">Quên mật khẩu</a>
+						<a href="./Forgot ">Quên mật khẩu</a>
 					</div>
 				</Form.Item>
 

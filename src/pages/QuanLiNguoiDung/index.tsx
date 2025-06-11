@@ -1,8 +1,7 @@
-import { Button, Modal, Table, Avatar, Tag, Input, Space, message } from 'antd';
+import { Button, Table, Avatar, Tag, Input, Space, message, Modal } from 'antd';
 import { useEffect } from 'react';
 import { useModel } from 'umi';
 import type { IColumn } from '@/components/Table/typing';
-import axios from 'axios';
 
 const UserManagementPage = () => {
 	const { data, getDataUserManagement, search, setSearch } = useModel('usermanagement');
@@ -54,21 +53,30 @@ const UserManagementPage = () => {
 			title: 'Thao tác',
 			width: 180,
 			render: (_, record) => (
-				<Button
-					danger
-					onClick={async () => {
-						try {
-							await axios.delete(`/api/users/${record.id}`);
-							message.success('Đã xoá người dùng thành công');
-							getDataUserManagement();
-						} catch (error) {
-							message.error('Lỗi khi xoá người dùng');
-							console.error(error);
-						}
-					}}
-				>
-					Xóa Người Dùng
-				</Button>
+			<Button
+				danger
+				onClick={() => {
+				Modal.confirm({
+					title: 'Xác nhận xoá',
+					content: `Bạn có chắc chắn muốn xoá người dùng "${record.username}" không?`,
+					okText: 'Xoá',
+					okType: 'danger',
+					cancelText: 'Huỷ',
+					onOk: async () => {
+					try {
+						await fetch(`http://localhost:3000/api/users/${record.id}`, { method: 'DELETE' });
+						message.success('Đã xoá người dùng thành công');
+						getDataUserManagement();
+					} catch (error) {
+						message.error('Lỗi khi xoá người dùng');
+						console.error(error);
+					}
+					},
+				});
+				}}
+			>
+				Xoá Người Dùng
+			</Button>
 			),
 		},
 	];

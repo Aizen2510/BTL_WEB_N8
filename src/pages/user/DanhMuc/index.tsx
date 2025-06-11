@@ -44,16 +44,6 @@ const IndexCategory = () => {
                 style={{ marginLeft: 8 }}
                 onClick={() => {
                 setCategoryRow(record);
-                setCategoryIsEdit(true);
-                setCategoryVisible(true);
-                }}
-            >
-                Sửa
-            </Button>
-            <Button
-                style={{ marginLeft: 8 }}
-                onClick={() => {
-                setCategoryRow(record);
                 setCategoryIsEdit(false);
                 setCategoryVisible(true);
                 }}

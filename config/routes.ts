@@ -40,11 +40,12 @@ export default [
 		component: './Login',
 		layout: false
 	},
-		{
+	{
 		path: '/register',
 		component: './Register',
 		layout: false
 	},
+
 
 
 

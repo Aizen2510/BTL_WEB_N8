@@ -1,13 +1,29 @@
 import type { IColumn } from '@/components/Table/typing';
-import { Button, Modal, Table, Input, Select } from 'antd';
+import { Button, Modal, Table, Input, Select, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useModel } from 'umi';
-import { DownloadOutlined, CheckSquareOutlined, CloseSquareOutlined, SettingOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  CheckSquareOutlined,
+  CloseSquareOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons';
+import {
+  approveDocument,
+  rejectDocument,
+  deleteDocument,
+} from '@/services/documentService'; // ✅ Gọi API
 
 const { Option } = Select;
 
 const DocumentApproval = () => {
-    const {data,visible,setVisible,row,setRow,isEdit,setIsEdit,setData,getDoc,searchText,setSearchText,filteredData,} = useModel('documentManager');
+    const {
+        data,
+        getDoc,
+        searchText,
+        setSearchText,
+        filteredData,
+    } = useModel('documentManager');
 
     const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -16,31 +32,43 @@ const DocumentApproval = () => {
         getDoc();
     }, []);
 
-    const handleApprove = (record: Document.Record, status: 'approved' | 'rejected') => {
-        const updated = data.map((doc: Document.Record) =>
-        doc.id === record.id ? { ...doc, isApproved: status } : doc
-        );
-        localStorage.setItem('data', JSON.stringify(updated));
-        getDoc();
+    const handleApprove = async (record: Document.Record, status: 'approved' | 'rejected') => {
+        try {
+        if (status === 'approved') {
+            await approveDocument(record.id); // ✅ Gọi API duyệt
+        } else {
+            await rejectDocument(record.id); // ✅ Gọi API từ chối
+        }
+        message.success(`${status === 'approved' ? 'Duyệt' : 'Từ chối'} thành công`);
+        getDoc(); // refresh lại dữ liệu
+        } catch {
+        message.error('Có lỗi xảy ra khi cập nhật trạng thái');
+        }
     };
 
-    // Duyệt tất cả các tài liệu được chọn
-    const handleApproveAll = () => {
-        const updated = data.map((doc: Document.Record) =>
-            selectedRowKeys.includes(doc.id) && doc.isApproved === 'pending'
-                ? { ...doc, isApproved: 'approved' }
-                : doc
+    const handleApproveAll = async () => {
+        try {
+        const pendingDocs = data.filter(
+            (doc: Document.Record) => selectedRowKeys.includes(doc.id) && doc.isApproved === 'pending'
         );
-        localStorage.setItem('data', JSON.stringify(updated));
+
+        await Promise.all(pendingDocs.map((doc) => approveDocument(doc.id))); // ✅ Duyệt hàng loạt
+        message.success('Duyệt tất cả thành công');
         setSelectedRowKeys([]);
         getDoc();
+        } catch {
+        message.error('Lỗi khi duyệt hàng loạt');
+        }
     };
 
-    // Xóa tài liệu
-    const handleDelete = (record: Document.Record) => {
-        const updated = data.filter((doc: Document.Record) => doc.id !== record.id);
-        localStorage.setItem('data', JSON.stringify(updated));
+    const handleDelete = async (record: Document.Record) => {
+        try {
+        await deleteDocument(record.id); // ✅ Gọi API xóa
+        message.success('Xóa tài liệu thành công');
         getDoc();
+        } catch {
+        message.error('Lỗi khi xóa tài liệu');
+        }
     };
 
     const columns: IColumn<Document.Record>[] = [
@@ -65,25 +93,35 @@ const DocumentApproval = () => {
         dataIndex: 'fileUrl',
         key: 'fileUrl',
         width: 120,
-        render: (_, record) =>
-            record.fileUrl ? (
-            <a href={record.fileUrl} target="_blank" rel="noopener noreferrer" download>
-                <Button icon={<DownloadOutlined />}>Tải file</Button>
+        render: (text, record) => {
+        const filePath = record.fileUrl
+            ? record.fileUrl.replace('http://localhost:3000/uploads/', '')
+            : '';
+            return record.fileUrl ? (
+            <a
+                href={`http://localhost:3000/download/${encodeURIComponent(filePath)}`}
+            >
+                <Button icon={<DownloadOutlined />} />
             </a>
             ) : (
             'Chưa có file'
-            ),
+            );
+        },
         },
         {
         title: 'Hành Động',
         width: 280,
         align: 'center',
         render: (_, record) => (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' , justifyContent: 'center'}}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
             {record.isApproved === 'pending' && (
                 <>
-                <Button type="primary" onClick={() => handleApprove(record, 'approved')}><CheckSquareOutlined /></Button>
-                <Button danger onClick={() => handleApprove(record, 'rejected')}><CloseSquareOutlined /></Button>
+                <Button type="primary" onClick={() => handleApprove(record, 'approved')}>
+                    <CheckSquareOutlined />
+                </Button>
+                <Button danger onClick={() => handleApprove(record, 'rejected')}>
+                    <CloseSquareOutlined />
+                </Button>
                 </>
             )}
             <Button danger onClick={() => handleDelete(record)}>
@@ -102,7 +140,7 @@ const DocumentApproval = () => {
         selectedRowKeys,
         onChange: (selectedKeys: React.Key[]) => setSelectedRowKeys(selectedKeys),
         getCheckboxProps: (record: Document.Record) => ({
-            disabled: record.isApproved !== 'pending', // chỉ cho chọn tài liệu chờ duyệt
+        disabled: record.isApproved !== 'pending', // chỉ chọn nếu chờ duyệt
         }),
     };
 
@@ -144,19 +182,6 @@ const DocumentApproval = () => {
         />
         </div>
     );
-    };
-
-    const safeGetLocalData = (key: string) => {
-    try {
-        const json = localStorage.getItem(key);
-        if (!json) return null;
-        const data = JSON.parse(json);
-        if (Array.isArray(data)) return data;
-        return null;
-    } catch (error) {
-        console.error('Lỗi parse JSON localStorage:', error);
-        return null;
-    }
 };
 
 export default DocumentApproval;

@@ -12,17 +12,25 @@ const CategoryDetail: React.FC<Props> = ({ categoryId }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    try {
-      const rawData = localStorage.getItem('data') || '[]';
-      const allDocs: Document.Record[] = JSON.parse(rawData);
-      const filtered = allDocs.filter((doc) => doc.categoryId === categoryId);
-      setDocuments(filtered);
-    } catch (error) {
-      console.error('Lỗi khi lấy dữ liệu tài liệu:', error);
-      setDocuments([]);
-    }
-    setLoading(false);
+    const fetchDocs = () => {
+      setLoading(true);
+      try {
+        const rawData = localStorage.getItem('data') || '[]';
+        const allDocs: Document.Record[] = JSON.parse(rawData);
+        const filtered = allDocs.filter((doc) => doc.categoryId === categoryId);
+        setDocuments(filtered);
+      } catch (error) {
+        console.error('Lỗi khi lấy dữ liệu tài liệu:', error);
+        setDocuments([]);
+      }
+      setLoading(false);
+    };
+
+    if (categoryId) fetchDocs();
+  }, [categoryId]);
+
+  useEffect(() => {
+    console.log('CategoryDetail: categoryId =', categoryId);
   }, [categoryId]);
 
   const columns: TableColumnType<Document.Record>[] = [
@@ -48,11 +56,20 @@ const CategoryDetail: React.FC<Props> = ({ categoryId }) => {
       title: 'Hành Động',
       key: 'action',
       align: 'center' as const,
-      render: (_: any, record: Document.Record) => (
-        <a href={record.fileUrl} target="_blank" rel="noopener noreferrer">
-          <Button icon={<DownloadOutlined />}></Button>
-        </a>
-      ),
+      render: (text, record) => {
+        const filePath = record.fileUrl
+          ? record.fileUrl.replace('http://localhost:3000/uploads/', '')
+          : '';
+        return record.fileUrl ? (
+          <a
+            href={`http://localhost:3000/download/${encodeURIComponent(filePath)}`}
+          >
+            <Button icon={<DownloadOutlined />} />
+          </a>
+        ) : (
+          'Chưa có file'
+        );
+      },
     },
   ];
 

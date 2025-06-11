@@ -16,6 +16,7 @@ const IndexCategory = () => {
         categoryRow,
         setCategoryRow,
         getCategories,
+        removeCategory
     } = useModel('documentCategoryModel');
 
     const [detailVisible, setDetailVisible] = useState(false);
@@ -44,12 +45,15 @@ const IndexCategory = () => {
             >
                 Sửa
             </Button>
+            
             <Button
                 danger
-                style={{ marginLeft: 8 }}
                 onClick={() => {
-                const updated = categories.filter((item) => item.categoryId !== record.categoryId);
-                updateCategories(updated);
+                Modal.confirm({
+                    title: 'Xác nhận xoá',
+                    content: 'Bạn có chắc chắn muốn xoá danh mục này không?',
+                    onOk: () => removeCategory(record.categoryId),
+                });
                 }}
             >
                 Xoá

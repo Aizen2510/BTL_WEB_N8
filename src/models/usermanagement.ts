@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { userdata } from '@/services/Auth';
+import { getAllUsers } from '@/services/Auth';
 
 // Tài khoản admin mặc định
 const ADMIN_USER: UserManagement.User = {
@@ -46,26 +46,22 @@ export default () => {
 
 		try {
 			// Lấy dữ liệu từ API
-			const res = await userdata();
-			dataLocal = res.data || [];
+			const res = await getAllUsers();
+			dataLocal = res || [];
 
-			// Lưu vào localStorage (có thể bỏ nếu không cần đồng bộ)
+			// Lưu vào localStorage (tuỳ chọn)
 			localStorage.setItem('users', JSON.stringify(dataLocal));
 		} catch (error) {
 			console.error('Lỗi khi gọi API người dùng:', error);
-
-			// Nếu lỗi API, fallback về localStorage
 			dataLocal = JSON.parse(localStorage.getItem('users') || '[]');
 		}
 
-		// Đảm bảo admin luôn tồn tại
 		const adminExists = dataLocal.some(user => user.email === ADMIN_USER.email);
 		if (!adminExists) {
 			dataLocal = [ADMIN_USER, ...dataLocal];
 			localStorage.setItem('users', JSON.stringify(dataLocal));
 		}
 
-		// Cập nhật thống kê tải lên / tải xuống
 		dataLocal = dataLocal.map(user => {
 			if (user.role === 'admin') return user;
 			const stats = getUserStats(user.username);
@@ -76,10 +72,7 @@ export default () => {
 			};
 		});
 
-		// Lọc bỏ admin khỏi danh sách hiển thị
 		const filteredUsers = dataLocal.filter(user => user.role !== 'admin');
-
-		// Lọc theo từ khóa tìm kiếm
 		const searchValue = search.trim().toLowerCase();
 		const searchResult = filteredUsers.filter(user =>
 			user.username.toLowerCase().includes(searchValue) ||

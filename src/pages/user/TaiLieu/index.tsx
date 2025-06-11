@@ -20,7 +20,7 @@ import { Button, Tag, Space } from 'antd';
 import useTaiLieuModel from '@/models/TaiLieu';
 import useUserNotification from '@/models/userNotification';
 import NoticeIcon from '@/components/RightContent/NoticeIcon';
-
+import { useModel } from 'umi';
 const DocumentsPage: React.FC = () => {
   // Lấy toàn bộ state và logic từ model
   const {
@@ -28,8 +28,7 @@ const DocumentsPage: React.FC = () => {
     setDocuments,
     loading,
     setLoading,
-    searchText,
-    setSearchText,
+
     selectedType,
     setSelectedType,
     previewVisible,
@@ -52,6 +51,10 @@ const DocumentsPage: React.FC = () => {
     0
   );
 
+   const { getDoc, searchText, setSearchText } = useModel('documentManager');
+    useEffect(() => {
+      getDoc();
+    }, []);
   // Get file icon based on type
   const getFileIcon = (type: string) => {
     switch (type) {
